@@ -23,11 +23,13 @@ func New(app *fiber.App, db *pgxpool.Pool) *Bootstrap {
 	})
 }
 
-func (b *Bootstrap) Init(ctx context.Context) {
+func (b *Bootstrap) Init(ctx context.Context) error {
 	repos := repositories.New(ctx, b.db)
 	services := services.New(ctx, repos)
 	handlers := handlers.New(ctx, services)
 	routes := routes.New(b.app, handlers)
 
 	routes.Init()
+
+	return nil
 }

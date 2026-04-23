@@ -15,13 +15,13 @@ func main() {
 	ctx := context.Background()
 	dbPool, err := cfg.ConnectionDB(ctx)
 	if err != nil {
-		log.Fatal("failed to connect to database: %v", err)
+		log.Fatal("failed to connect to database: " + err.Error())
 	}
 	defer dbPool.Close()
 
-	bootstrap := internal.New(app, dbPool)
-
-	bootstrap.Init(ctx)
+	if err := internal.New(app, dbPool).Init(ctx); err != nil {
+		log.Fatal("failed to initialize app: " + err.Error())
+	}
 
 	app.Listen(":"+envs.Port, fiber.ListenConfig{
 		EnablePrintRoutes: true,
