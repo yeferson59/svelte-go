@@ -21,9 +21,12 @@ func New(app *fiber.App, middlewares middlewares.Middlewares, handlers handlers.
 }
 
 func (r Routes) Init() {
-	r.app.Use(r.middlewares.Recovery())
-	r.app.Use(r.middlewares.RequestID())
-	r.app.Use(r.middlewares.Logger())
+	r.app.Use(
+		r.middlewares.Recovery(),
+		r.middlewares.RequestID(),
+		r.middlewares.Logger(),
+		r.middlewares.CORS(),
+	)
 
 	r.Health()
 }
