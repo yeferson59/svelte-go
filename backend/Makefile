@@ -1,4 +1,4 @@
-.PHONY: db
+.PHONY: run db down
 
 run:
 	@go run cmd/api/main.go

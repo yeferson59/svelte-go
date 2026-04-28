@@ -17,7 +17,7 @@ func (c *Config) LoadEnvs() *Env {
 	_ = godotenv.Load()
 
 	return &Env{
-		Port:        c.GetString("PORT", ":8080"),
+		Port:        c.GetString("PORT", "8080"),
 		DatabaseURL: c.GetString("DATABASE_URL", ""),
 	}
 }

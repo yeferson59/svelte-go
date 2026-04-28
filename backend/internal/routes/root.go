@@ -3,20 +3,27 @@ package routes
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/yeferson59/svelte-go/internal/handlers"
+	"github.com/yeferson59/svelte-go/internal/middlewares"
 )
 
 type Routes struct {
-	app      *fiber.App
-	handlers handlers.Handlers
+	app         *fiber.App
+	middlewares middlewares.Middlewares
+	handlers    handlers.Handlers
 }
 
-func New(app *fiber.App, handlers handlers.Handlers) Routes {
+func New(app *fiber.App, middlewares middlewares.Middlewares, handlers handlers.Handlers) Routes {
 	return Routes{
-		app:      app,
-		handlers: handlers,
+		app:         app,
+		middlewares: middlewares,
+		handlers:    handlers,
 	}
 }
 
 func (r Routes) Init() {
+	r.app.Use(r.middlewares.Recovery())
+	r.app.Use(r.middlewares.RequestID())
+	r.app.Use(r.middlewares.Logger())
+
 	r.Health()
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/yeferson59/svelte-go/internal/handlers"
+	"github.com/yeferson59/svelte-go/internal/middlewares"
 	"github.com/yeferson59/svelte-go/internal/repositories"
 	"github.com/yeferson59/svelte-go/internal/routes"
 	"github.com/yeferson59/svelte-go/internal/services"
@@ -27,7 +28,8 @@ func (b *Bootstrap) Init(ctx context.Context) error {
 	repos := repositories.New(ctx, b.db)
 	services := services.New(ctx, repos)
 	handlers := handlers.New(ctx, services)
-	routes := routes.New(b.app, handlers)
+	middlewares := middlewares.New()
+	routes := routes.New(b.app, middlewares, handlers)
 
 	routes.Init()
 
