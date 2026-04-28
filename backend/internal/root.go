@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/yeferson59/svelte-go/internal/config"
 	"github.com/yeferson59/svelte-go/internal/handlers"
 	"github.com/yeferson59/svelte-go/internal/middlewares"
 	"github.com/yeferson59/svelte-go/internal/repositories"
@@ -13,14 +14,16 @@ import (
 )
 
 type Bootstrap struct {
-	app *fiber.App
-	db  *pgxpool.Pool
+	app  *fiber.App
+	db   *pgxpool.Pool
+	envs *config.Env
 }
 
-func New(app *fiber.App, db *pgxpool.Pool) *Bootstrap {
+func New(app *fiber.App, db *pgxpool.Pool, envs *config.Env) *Bootstrap {
 	return new(Bootstrap{
-		app: app,
-		db:  db,
+		app:  app,
+		db:   db,
+		envs: envs,
 	})
 }
 
@@ -28,7 +31,7 @@ func (b *Bootstrap) Init(ctx context.Context) error {
 	repos := repositories.New(ctx, b.db)
 	services := services.New(ctx, repos)
 	handlers := handlers.New(ctx, services)
-	middlewares := middlewares.New()
+	middlewares := middlewares.New(b.envs)
 	routes := routes.New(b.app, middlewares, handlers)
 
 	routes.Init()

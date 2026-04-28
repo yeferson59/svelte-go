@@ -11,6 +11,7 @@ import (
 type Env struct {
 	Port        string
 	DatabaseURL string
+	JWTSecret   string
 }
 
 func (c *Config) LoadEnvs() *Env {
@@ -19,6 +20,7 @@ func (c *Config) LoadEnvs() *Env {
 	return &Env{
 		Port:        c.GetString("PORT", "8080"),
 		DatabaseURL: c.GetString("DATABASE_URL", ""),
+		JWTSecret:   c.GetString("JWT_SECRET", "secret"),
 	}
 }
 

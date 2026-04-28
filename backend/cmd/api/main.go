@@ -19,7 +19,7 @@ func main() {
 	}
 	defer dbPool.Close()
 
-	if err := internal.New(app, dbPool).Init(ctx); err != nil {
+	if err := internal.New(app, dbPool, envs).Init(ctx); err != nil {
 		log.Fatal("failed to initialize app: " + err.Error())
 	}
 

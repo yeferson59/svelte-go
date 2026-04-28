@@ -29,4 +29,5 @@ func (r Routes) Init() {
 	)
 
 	r.Health()
+	r.Auth()
 }

@@ -1,7 +1,13 @@
 package middlewares
 
-type Middlewares struct{}
+import "github.com/yeferson59/svelte-go/internal/config"
 
-func New() Middlewares {
-	return Middlewares{}
+type Middlewares struct {
+	envs *config.Env
+}
+
+func New(envs *config.Env) Middlewares {
+	return Middlewares{
+		envs: envs,
+	}
 }
