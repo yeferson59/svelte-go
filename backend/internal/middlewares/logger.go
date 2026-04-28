@@ -1,10 +1,17 @@
 package middlewares
 
 import (
+	"os"
+
+	middleware "github.com/gofiber/contrib/v3/zerolog"
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/logger"
+	"github.com/rs/zerolog"
 )
 
 func (Middlewares) Logger() fiber.Handler {
-	return logger.New()
+	logger := zerolog.New(os.Stderr).With().Timestamp().Logger()
+
+	return middleware.New(middleware.Config{
+		Logger: &logger,
+	})
 }

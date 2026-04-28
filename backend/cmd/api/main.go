@@ -23,7 +23,5 @@ func main() {
 		log.Fatal("failed to initialize app: " + err.Error())
 	}
 
-	app.Listen(":"+envs.Port, fiber.ListenConfig{
-		EnablePrintRoutes: true,
-	})
+	app.Listen(":" + envs.Port)
 }
