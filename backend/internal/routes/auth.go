@@ -1,6 +1,8 @@
 package routes
 
 func (r *Routes) Auth() {
-	r.app.Post("/login", r.handlers.Login)
-	r.app.Use(r.middlewares.JWT())
+	auth := r.app.Group("/auth")
+
+	auth.Post("/login", r.handlers.Login)
+	auth.Use(r.middlewares.JWT())
 }
