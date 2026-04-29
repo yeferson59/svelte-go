@@ -1,3 +1,13 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@layer components {
+	.rounded-12 {
+		@apply rounded-[12px];
+	}
+
+	.rounded-16 {
+		@apply rounded-[16px];
+	}
+}
