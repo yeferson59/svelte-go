@@ -1,6 +1,8 @@
 package entities
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -10,6 +12,6 @@ type User struct {
 	Email         string    `json:"email"`
 	EmailVerified bool      `json:"emailVerified"`
 	Image         string    `json:"image"`
-	CreatedAt     string    `json:"createdAt"`
-	UpdatedAt     string    `json:"updatedAt"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
