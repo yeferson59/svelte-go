@@ -27,3 +27,36 @@ func (r *Repository) List(ctx context.Context, offset, limit uint) ([]entities.U
 
 	return users, nil
 }
+
+func (r *Repository) GetByID(ctx context.Context, id string) (entities.User, error) {
+	var user entities.User
+	if err := r.db.QueryRow(ctx, "SELECT * FROM users WHERE id = $1", id).Scan(&user); err != nil {
+		return entities.User{}, err
+	}
+
+	return user, nil
+}
+
+func (r *Repository) Create(ctx context.Context, name, email, image string) (entities.User, error) {
+	var user entities.User
+	if err := r.db.QueryRow(ctx, "INSERT INTO users (name, email, image) VALUES ($1, $2, $3) RETURNING *", name, email, image).Scan(&user); err != nil {
+		return entities.User{}, err
+	}
+
+	return user, nil
+}
+
+func (r *Repository) Update(ctx context.Context, id, name, email, image string) (entities.User, error) {
+	var user entities.User
+	if err := r.db.QueryRow(ctx, "UPDATE users SET name = $1, email = $2, image = $3 WHERE id = $4 RETURNING *", name, email, image, id).Scan(&user); err != nil {
+		return entities.User{}, err
+	}
+
+	return user, nil
+}
+
+func (r *Repository) Delete(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
+
+	return err
+}
