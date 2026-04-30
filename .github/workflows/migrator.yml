@@ -3,19 +3,26 @@ name: Migrator
 on:
   push:
     branches: [main]
+    paths:
+      - backend/**
   pull_request:
     branches: [main]
+    paths:
+      - backend/**
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-go@v6
         with:
           go-version: "1.26.2"
+
       - run: go mod download
         working-directory: backend
+
       - run: go run internal/migrator/main.go
         working-directory: backend
         env:
