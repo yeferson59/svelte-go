@@ -9,18 +9,20 @@ import (
 )
 
 type Env struct {
-	Port        string
-	DatabaseURL string
-	JWTSecret   string
+	Port          string
+	PathMigration string
+	DatabaseURL   string
+	JWTSecret     string
 }
 
 func (c *Config) LoadEnvs() *Env {
 	_ = godotenv.Load()
 
 	return &Env{
-		Port:        c.GetString("PORT", "8080"),
-		DatabaseURL: c.GetString("DATABASE_URL", ""),
-		JWTSecret:   c.GetString("JWT_SECRET", "secret"),
+		Port:          c.GetString("PORT", "8080"),
+		PathMigration: c.GetString("PATH_MIGRATION", "file://internal/migrations"),
+		DatabaseURL:   c.GetString("DATABASE_URL", ""),
+		JWTSecret:     c.GetString("JWT_SECRET", "secret"),
 	}
 }
 
