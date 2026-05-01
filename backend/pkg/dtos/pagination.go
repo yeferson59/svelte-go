@@ -1,6 +1,6 @@
 package dtos
 
 type FilterPagination[I any, M any] struct {
-	Data     I `json:"data"`
+	Items    I `json:"items"`
 	MetaData M `json:"metaData"`
 }

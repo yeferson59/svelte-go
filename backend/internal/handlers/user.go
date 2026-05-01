@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/paginate"
-	"github.com/google/uuid"
 	"github.com/yeferson59/svelte-go/internal/dtos/user"
 	"github.com/yeferson59/svelte-go/internal/entities"
 	"github.com/yeferson59/svelte-go/pkg/dtos"
@@ -12,84 +11,82 @@ import (
 func (handler *Handlers) GetListUsers(c fiber.Ctx) error {
 	paginateInfo, ok := paginate.FromContext(c)
 	if !ok {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "paginate info not found"})
+		return handler.responseInternalServerError(c, "", "paginate info not found")
 	}
 
 	users, err := handler.services.GetListUsers(handler.ctx, uint(paginateInfo.Offset), uint(paginateInfo.Limit))
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseFromDomain(c, err, "get product pagination", "users:list")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(
-		dtos.FilterPagination[[]entities.User, fiber.Map]{
-			Data: users,
-			MetaData: fiber.Map{
-				"page":   paginateInfo.Page,
-				"limit":  paginateInfo.Limit,
-				"offset": paginateInfo.Offset,
-			},
+	return handler.responseStatusOk(c, "product pagination", "get products successfully", dtos.FilterPagination[[]entities.User, fiber.Map]{
+		Items: users,
+		MetaData: fiber.Map{
+			"page":   paginateInfo.Page,
+			"limit":  paginateInfo.Limit,
+			"offset": paginateInfo.Offset,
 		},
-	)
+	})
 }
 
 func (handler *Handlers) GetUserByID(c fiber.Ctx) error {
-	id, err := uuid.Parse(c.Params("id"))
+	userID, err := handler.getParamUUID(c, "id")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid user id"})
+		return handler.responseBadRequest(c, "validate id", "invalid user id")
 	}
 
-	user, err := handler.services.GetUserByID(handler.ctx, id)
+	user, err := handler.services.GetUserByID(handler.ctx, userID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseFromDomain(c, err, "get user by id", "users:id")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(user)
+	return handler.responseStatusOk(c, "get user by id", "get user successfully", user)
 }
 
 func (handler *Handlers) CreateUser(c fiber.Ctx) error {
 	var createUserDto user.CreateDTO
 
 	if err := c.Bind().Body(&createUserDto); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"err": err.Error()})
+		return handler.responseBadRequest(c, "", err.Error())
 	}
 
 	user, err := handler.services.CreateUser(handler.ctx, createUserDto.Name, createUserDto.Email, createUserDto.Image)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseFromDomain(c, err, "", "")
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	return handler.responseSuccess(c, fiber.StatusCreated, "", "", user)
 }
 
 func (handler *Handlers) UpdateUser(c fiber.Ctx) error {
 	userID, err := handler.getParamUUID(c, "id")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseBadRequest(c, "", err.Error())
 	}
 
 	var updateUser user.UpdateDTO
 
 	if err := c.Bind().Body(&updateUser); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseBadRequest(c, "", err.Error())
 	}
 
 	user, err := handler.services.UpdateUser(handler.ctx, userID, updateUser.Name, updateUser.Email, updateUser.Image)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseFromDomain(c, err, "", "")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(user)
+	return handler.responseStatusOk(c, "", "", user)
 }
 
 func (handler *Handlers) DeleteUser(c fiber.Ctx) error {
 	userID, err := handler.getParamUUID(c, "id")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseBadRequest(c, "", err.Error())
 	}
 
 	if err := handler.services.DeleteUser(handler.ctx, userID); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return handler.responseFromDomain(c, err, "", "")
 	}
 
-	return c.SendStatus(fiber.StatusNoContent)
+	return handler.responseSuccess(c, fiber.StatusNoContent, "", "", "")
 }
