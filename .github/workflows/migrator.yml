@@ -4,11 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - backend/**
+      - backend/internal/migrator/**
+      - backend/internal/entities/**
+      - backend/internal/migrations/**
   pull_request:
     branches: [main]
     paths:
-      - backend/**
+      - backend/internal/migrator/**
+      - backend/internal/entities/**
+      - backend/internal/migrations/**
 
 permissions:
   contents: read
