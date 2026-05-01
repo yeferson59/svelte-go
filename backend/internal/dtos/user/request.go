@@ -7,7 +7,7 @@ type CreateDTO struct {
 }
 
 type UpdateDTO struct {
-	Name  string `json:"name,omitzero" validate:"min=2"`
-	Email string `json:"email,omitzero" validate:"min=2"`
-	Image string `json:"image,omitzero" validate:"min=2"`
+	Name  string `json:"name,omitzero"`
+	Email string `json:"email,omitzero"`
+	Image string `json:"image,omitzero"`
 }

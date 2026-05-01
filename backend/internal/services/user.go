@@ -18,3 +18,11 @@ func (s *Services) GetUserByID(ctx context.Context, id uuid.UUID) (entities.User
 func (s *Services) CreateUser(ctx context.Context, name, email, image string) (entities.User, error) {
 	return s.repos.CreateUser(ctx, name, email, image)
 }
+
+func (s *Services) UpdateUser(ctx context.Context, id uuid.UUID, name, email, image string) (entities.User, error) {
+	return s.repos.UpdateUser(ctx, id, name, email, image)
+}
+
+func (s *Services) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	return s.repos.DeleteUser(ctx, id)
+}

@@ -58,5 +58,38 @@ func (handler *Handlers) CreateUser(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return c.JSON(user)
+	return c.Status(fiber.StatusCreated).JSON(user)
+}
+
+func (handler *Handlers) UpdateUser(c fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	var updateUser user.UpdateDTO
+
+	if err := c.Bind().Body(&updateUser); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	user, err := handler.services.UpdateUser(handler.ctx, userID, updateUser.Name, updateUser.Email, updateUser.Image)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(user)
+}
+
+func (handler *Handlers) DeleteUser(c fiber.Ctx) error {
+	userID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if err := handler.services.DeleteUser(handler.ctx, userID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
 }
