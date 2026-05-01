@@ -72,6 +72,15 @@ func (handler *Handlers) responseFromDomain(c fiber.Ctx, err error, message, act
 		})
 	}
 
+	if strings.Contains(err.Error(), "not found") {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"success":   false,
+			"message":   message,
+			"action":    action,
+			"timestamp": time.Now(),
+		})
+	}
+
 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 		"success":   false,
 		"message":   message,

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/google/uuid"
@@ -26,6 +27,10 @@ func (s *Services) UpdateUser(ctx context.Context, id uuid.UUID, name, email, im
 		return entities.User{}, err
 	}
 
+	if existUser.DeletedAt != nil {
+		return entities.User{}, errors.New("not found user")
+	}
+
 	if strings.TrimSpace(name) != "" && existUser.Name != name {
 		existUser.Name = name
 	}
@@ -38,7 +43,7 @@ func (s *Services) UpdateUser(ctx context.Context, id uuid.UUID, name, email, im
 		existUser.Image = image
 	}
 
-	return s.repos.UpdateUser(ctx, id, existUser.Name, existUser.Email, existUser.Image)
+	return s.repos.UpdateUser(ctx, existUser.ID, existUser.Name, existUser.Email, existUser.Image)
 }
 
 func (s *Services) DeleteUser(ctx context.Context, id uuid.UUID) error {

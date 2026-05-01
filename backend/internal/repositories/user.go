@@ -60,7 +60,7 @@ func (r *Repository) UpdateUser(ctx context.Context, id uuid.UUID, name, email, 
 }
 
 func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, "UPDATE users SET deleted_at = $1 WHERE id = $2", time.Now(), id.String())
+	_, err := r.db.Exec(ctx, "UPDATE users SET deleted_at = $1 WHERE id = $2 AND deleted_at IS NULL", time.Now(), id.String())
 
 	return err
 }
