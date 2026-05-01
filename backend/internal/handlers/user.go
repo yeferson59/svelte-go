@@ -6,6 +6,7 @@ import (
 	"github.com/yeferson59/svelte-go/internal/dtos/user"
 	"github.com/yeferson59/svelte-go/internal/entities"
 	"github.com/yeferson59/svelte-go/pkg/dtos"
+	"github.com/yeferson59/svelte-go/pkg/helpers"
 )
 
 func (handler *Handlers) GetListUsers(c fiber.Ctx) error {
@@ -14,17 +15,23 @@ func (handler *Handlers) GetListUsers(c fiber.Ctx) error {
 		return handler.responseInternalServerError(c, "", "paginate info not found")
 	}
 
-	users, err := handler.services.GetListUsers(handler.ctx, uint(paginateInfo.Offset), uint(paginateInfo.Limit))
+	users, count, err := handler.services.GetListUsers(handler.ctx, uint(paginateInfo.Offset), uint(paginateInfo.Limit))
 	if err != nil {
 		return handler.responseFromDomain(c, err, "get product pagination", "users:list")
 	}
 
+	totalPages := helpers.CalculateTotalPages(count, uint(paginateInfo.Limit))
+
 	return handler.responseStatusOk(c, "product pagination", "get products successfully", dtos.FilterPagination[[]entities.User, fiber.Map]{
 		Items: users,
 		MetaData: fiber.Map{
-			"page":   paginateInfo.Page,
-			"limit":  paginateInfo.Limit,
-			"offset": paginateInfo.Offset,
+			"currentPage":  paginateInfo.Page,
+			"usersForPage": paginateInfo.Limit,
+			"offset":       paginateInfo.Offset,
+			"totalUsers":   count,
+			"totalPages":   totalPages,
+			"previous":     paginateInfo.Page > 1,
+			"next":         paginateInfo.Page < int(totalPages),
 		},
 	})
 }

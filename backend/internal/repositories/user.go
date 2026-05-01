@@ -8,10 +8,16 @@ import (
 	"github.com/yeferson59/svelte-go/internal/entities"
 )
 
-func (r *Repository) ListUsers(ctx context.Context, offset, limit uint) ([]entities.User, error) {
+func (r *Repository) ListUsers(ctx context.Context, offset, limit uint) ([]entities.User, uint, error) {
+	var count uint
+
+	if err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&count); err != nil {
+		return nil, 0, err
+	}
+
 	rows, err := r.db.Query(ctx, "SELECT * FROM users LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -21,13 +27,13 @@ func (r *Repository) ListUsers(ctx context.Context, offset, limit uint) ([]entit
 		var user entities.User
 
 		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 
 		users = append(users, user)
 	}
 
-	return users, nil
+	return users, count, nil
 }
 
 func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (entities.User, error) {

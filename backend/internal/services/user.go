@@ -10,7 +10,7 @@ import (
 	"github.com/yeferson59/svelte-go/pkg/helpers"
 )
 
-func (s *Services) GetListUsers(ctx context.Context, offset, limit uint) ([]entities.User, error) {
+func (s *Services) GetListUsers(ctx context.Context, offset, limit uint) ([]entities.User, uint, error) {
 	return s.repos.ListUsers(ctx, offset, limit)
 }
 
