@@ -31,7 +31,8 @@ func (r *Repository) ListUsers(ctx context.Context, offset, limit uint) ([]entit
 
 func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (entities.User, error) {
 	var user entities.User
-	if err := r.db.QueryRow(ctx, "SELECT * FROM users WHERE id = $1", id.String()).Scan(&user); err != nil {
+
+	if err := r.db.QueryRow(ctx, "SELECT * FROM users WHERE id = $1", id.String()).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt); err != nil {
 		return entities.User{}, err
 	}
 
@@ -40,7 +41,8 @@ func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (entities.Us
 
 func (r *Repository) CreateUser(ctx context.Context, name, email, image string) (entities.User, error) {
 	var user entities.User
-	if err := r.db.QueryRow(ctx, "INSERT INTO users (name, email, image) VALUES ($1, $2, $3) RETURNING *", name, email, image).Scan(&user); err != nil {
+
+	if err := r.db.QueryRow(ctx, "INSERT INTO users (name, email, image) VALUES ($1, $2, $3) RETURNING *", name, email, image).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt); err != nil {
 		return entities.User{}, err
 	}
 
@@ -49,7 +51,7 @@ func (r *Repository) CreateUser(ctx context.Context, name, email, image string) 
 
 func (r *Repository) UpdateUser(ctx context.Context, id uuid.UUID, name, email, image string) (entities.User, error) {
 	var user entities.User
-	if err := r.db.QueryRow(ctx, "UPDATE users SET name = $1, email = $2, image = $3 WHERE id = $4 RETURNING *", name, email, image, id.String()).Scan(&user); err != nil {
+	if err := r.db.QueryRow(ctx, "UPDATE users SET name = $1, email = $2, image = $3 WHERE id = $4 RETURNING *", name, email, image, id.String()).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt); err != nil {
 		return entities.User{}, err
 	}
 

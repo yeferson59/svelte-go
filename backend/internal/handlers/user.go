@@ -4,6 +4,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/paginate"
 	"github.com/google/uuid"
+	"github.com/yeferson59/svelte-go/internal/dtos/user"
+	"github.com/yeferson59/svelte-go/internal/entities"
+	"github.com/yeferson59/svelte-go/pkg/dtos"
 )
 
 func (handler *Handlers) GetListUsers(c fiber.Ctx) error {
@@ -17,7 +20,16 @@ func (handler *Handlers) GetListUsers(c fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(users)
+	return c.Status(fiber.StatusOK).JSON(
+		dtos.FilterPagination[[]entities.User, fiber.Map]{
+			Data: users,
+			MetaData: fiber.Map{
+				"page":   paginateInfo.Page,
+				"limit":  paginateInfo.Limit,
+				"offset": paginateInfo.Offset,
+			},
+		},
+	)
 }
 
 func (handler *Handlers) GetUserByID(c fiber.Ctx) error {
@@ -32,4 +44,19 @@ func (handler *Handlers) GetUserByID(c fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
+}
+
+func (handler *Handlers) CreateUser(c fiber.Ctx) error {
+	var createUserDto user.CreateDTO
+
+	if err := c.Bind().Body(&createUserDto); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"err": err.Error()})
+	}
+
+	user, err := handler.services.CreateUser(handler.ctx, createUserDto.Name, createUserDto.Email, createUserDto.Image)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.JSON(user)
 }
