@@ -62,7 +62,7 @@ func (handler *Handlers) CreateUser(c fiber.Ctx) error {
 }
 
 func (handler *Handlers) UpdateUser(c fiber.Ctx) error {
-	userID, err := uuid.Parse(c.Params("id"))
+	userID, err := handler.getParamUUID(c, "id")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -82,7 +82,7 @@ func (handler *Handlers) UpdateUser(c fiber.Ctx) error {
 }
 
 func (handler *Handlers) DeleteUser(c fiber.Ctx) error {
-	userID, err := uuid.Parse(c.Params("id"))
+	userID, err := handler.getParamUUID(c, "id")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
