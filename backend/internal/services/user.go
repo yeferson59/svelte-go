@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/yeferson59/svelte-go/internal/entities"
@@ -20,7 +21,24 @@ func (s *Services) CreateUser(ctx context.Context, name, email, image string) (e
 }
 
 func (s *Services) UpdateUser(ctx context.Context, id uuid.UUID, name, email, image string) (entities.User, error) {
-	return s.repos.UpdateUser(ctx, id, name, email, image)
+	existUser, err := s.repos.GetUserByID(ctx, id)
+	if err != nil {
+		return entities.User{}, err
+	}
+
+	if strings.TrimSpace(name) != "" && existUser.Name != name {
+		existUser.Name = name
+	}
+
+	if strings.TrimSpace(email) != "" && existUser.Email != email {
+		existUser.Email = email
+	}
+
+	if strings.TrimSpace(image) != "" && existUser.Image != image {
+		existUser.Image = image
+	}
+
+	return s.repos.UpdateUser(ctx, id, existUser.Name, existUser.Email, existUser.Image)
 }
 
 func (s *Services) DeleteUser(ctx context.Context, id uuid.UUID) error {

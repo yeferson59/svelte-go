@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/yeferson59/svelte-go/internal/entities"
@@ -51,7 +52,7 @@ func (r *Repository) CreateUser(ctx context.Context, name, email, image string) 
 
 func (r *Repository) UpdateUser(ctx context.Context, id uuid.UUID, name, email, image string) (entities.User, error) {
 	var user entities.User
-	if err := r.db.QueryRow(ctx, "UPDATE users SET name = $1, email = $2, image = $3 WHERE id = $4 RETURNING *", name, email, image, id.String()).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt, &user.DeletedAt); err != nil {
+	if err := r.db.QueryRow(ctx, "UPDATE users SET name = $1, email = $2, image = $3, updated_at = $4 WHERE id = $5 RETURNING *", name, email, image, time.Now(), id.String()).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt, &user.DeletedAt); err != nil {
 		return entities.User{}, err
 	}
 
@@ -59,7 +60,7 @@ func (r *Repository) UpdateUser(ctx context.Context, id uuid.UUID, name, email, 
 }
 
 func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM users WHERE id = $1", id.String())
+	_, err := r.db.Exec(ctx, "UPDATE users SET deleted_at = $1 WHERE id = $2", time.Now(), id.String())
 
 	return err
 }
