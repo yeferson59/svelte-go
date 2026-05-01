@@ -52,7 +52,7 @@ func (handler *Handlers) CreateUser(c fiber.Ctx) error {
 
 	user, err := handler.services.CreateUser(handler.ctx, createUserDto.Name, createUserDto.Email, createUserDto.Image)
 	if err != nil {
-		return handler.responseFromDomain(c, err, "", "")
+		return handler.responseFromDomain(c, err, "", "users:create")
 	}
 
 	return handler.responseSuccess(c, fiber.StatusCreated, "", "", user)
@@ -72,7 +72,7 @@ func (handler *Handlers) UpdateUser(c fiber.Ctx) error {
 
 	user, err := handler.services.UpdateUser(handler.ctx, userID, updateUser.Name, updateUser.Email, updateUser.Image)
 	if err != nil {
-		return handler.responseFromDomain(c, err, "", "")
+		return handler.responseFromDomain(c, err, "", "users:update")
 	}
 
 	return handler.responseStatusOk(c, "", "", user)
@@ -85,7 +85,7 @@ func (handler *Handlers) DeleteUser(c fiber.Ctx) error {
 	}
 
 	if err := handler.services.DeleteUser(handler.ctx, userID); err != nil {
-		return handler.responseFromDomain(c, err, "", "")
+		return handler.responseFromDomain(c, err, "", "users:delete")
 	}
 
 	return handler.responseSuccess(c, fiber.StatusNoContent, "", "", "")
