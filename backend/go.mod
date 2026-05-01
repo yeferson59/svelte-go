@@ -3,8 +3,8 @@ module github.com/yeferson59/svelte-go
 go 1.26.2
 
 require (
-	github.com/gofiber/contrib/v3/jwt v1.1.2
-	github.com/gofiber/contrib/v3/zerolog v1.0.3
+	github.com/gofiber/contrib/v3/jwt v1.1.3
+	github.com/gofiber/contrib/v3/zerolog v1.0.4
 	github.com/gofiber/fiber/v3 v3.2.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
@@ -22,8 +22,8 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/lib/pq v1.12.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
