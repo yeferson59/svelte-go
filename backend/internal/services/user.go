@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yeferson59/svelte-go/internal/entities"
+	"github.com/yeferson59/svelte-go/pkg/helpers"
 )
 
 func (s *Services) GetListUsers(ctx context.Context, offset, limit uint) ([]entities.User, error) {
@@ -18,6 +19,8 @@ func (s *Services) GetUserByID(ctx context.Context, id uuid.UUID) (entities.User
 }
 
 func (s *Services) CreateUser(ctx context.Context, name, email, image string) (entities.User, error) {
+	name = helpers.NormalizateNames(name)
+
 	return s.repos.CreateUser(ctx, name, email, image)
 }
 
@@ -32,7 +35,7 @@ func (s *Services) UpdateUser(ctx context.Context, id uuid.UUID, name, email, im
 	}
 
 	if strings.TrimSpace(name) != "" && existUser.Name != name {
-		existUser.Name = name
+		existUser.Name = helpers.NormalizateNames(name)
 	}
 
 	if strings.TrimSpace(email) != "" && existUser.Email != email {
