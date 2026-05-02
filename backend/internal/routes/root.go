@@ -8,19 +8,20 @@ import (
 
 type Routes struct {
 	app         *fiber.App
+	router      fiber.Router
 	middlewares middlewares.Middlewares
 	handlers    handlers.Handlers
 }
 
-func New(app *fiber.App, middlewares middlewares.Middlewares, handlers handlers.Handlers) Routes {
-	return Routes{
+func New(app *fiber.App, middlewares middlewares.Middlewares, handlers handlers.Handlers) *Routes {
+	return new(Routes{
 		app:         app,
 		middlewares: middlewares,
 		handlers:    handlers,
-	}
+	})
 }
 
-func (r Routes) Init() {
+func (r *Routes) Init() {
 	r.app.Use(
 		r.middlewares.Recovery(),
 		r.middlewares.RequestID(),
@@ -30,5 +31,7 @@ func (r Routes) Init() {
 
 	r.Health()
 	r.Auth()
+
+	r.router = r.app.Use(r.middlewares.JWT())
 	r.Users()
 }
