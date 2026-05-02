@@ -81,6 +81,15 @@ func (handler *Handlers) responseFromDomain(c fiber.Ctx, err error, message, act
 		})
 	}
 
+	if strings.Contains(err.Error(), "found") || strings.Contains(err.Error(), "exist") || strings.Contains(err.Error(), "existing") {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"success":   false,
+			"message":   message,
+			"action":    action,
+			"timestamp": time.Now(),
+		})
+	}
+
 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 		"success":   false,
 		"message":   message,
