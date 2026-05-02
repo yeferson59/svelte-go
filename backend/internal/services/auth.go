@@ -8,6 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/yeferson59/svelte-go/internal/dtos/auth"
 	"github.com/yeferson59/svelte-go/pkg/helpers"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *Services) Login(ctx context.Context, email, password string) (auth.LoginResponseDTO, error) {
@@ -16,7 +17,7 @@ func (s *Services) Login(ctx context.Context, email, password string) (auth.Logi
 		return auth.LoginResponseDTO{}, err
 	}
 
-	if password != account.Password {
+	if bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(password)) != nil {
 		return auth.LoginResponseDTO{}, errors.New("invalid credentials")
 	}
 
@@ -52,7 +53,12 @@ func (s *Services) Register(ctx context.Context, name, email, password string) (
 		return auth.RegisterResponseDTO{}, errors.New("user existing")
 	}
 
-	user, err := s.repos.Register(ctx, helpers.NormalizateNames(name), email, password)
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return auth.RegisterResponseDTO{}, err
+	}
+
+	user, err := s.repos.Register(ctx, helpers.NormalizateNames(name), email, string(passwordHash))
 	if err != nil {
 		return auth.RegisterResponseDTO{}, err
 	}
