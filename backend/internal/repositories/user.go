@@ -70,3 +70,13 @@ func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 	return err
 }
+
+func (r *Repository) GetUserByEmail(ctx context.Context, email string) (entities.User, error) {
+	var user entities.User
+
+	if err := r.db.QueryRow(ctx, "SELECT * FROM users WHERE email = $1", email).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt, &user.DeletedAt); err != nil {
+		return entities.User{}, err
+	}
+
+	return user, nil
+}

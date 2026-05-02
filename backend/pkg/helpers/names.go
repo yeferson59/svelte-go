@@ -14,7 +14,12 @@ func NormalizateNames(name string) string {
 
 	names := strings.Split(nom, " ")
 
-	return strings.ToUpper(names[0][:1]) + names[0][1:] + " " + strings.ToUpper(names[1][:1]) + names[1][1:]
+	for i, name := range names {
+		name = strings.TrimSpace(name)
+		names[i] = strings.ToUpper(name[:1]) + strings.ToLower(name[1:])
+	}
+
+	return strings.Join(names, " ")
 }
 
 func CalculateTotalPages(count uint, limit uint) uint {
