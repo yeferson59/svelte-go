@@ -9,7 +9,7 @@ import (
 	"github.com/yeferson59/svelte-go/internal/entities"
 )
 
-func (r *Repository) Login(ctx context.Context, email string) (entities.User, entities.Account, error) {
+func (r *Repository) GetAccountByEmail(ctx context.Context, email string) (entities.User, entities.Account, error) {
 	var account entities.Account
 	var user entities.User
 

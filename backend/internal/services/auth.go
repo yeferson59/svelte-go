@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Services) Login(ctx context.Context, email, password string) (auth.LoginResponseDTO, error) {
-	user, account, err := s.repos.Login(ctx, email)
+	user, account, err := s.repos.GetAccountByEmail(ctx, email)
 	if err != nil {
 		return auth.LoginResponseDTO{}, err
 	}
