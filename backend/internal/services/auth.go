@@ -21,9 +21,10 @@ func (s *Services) Login(ctx context.Context, email, password string) (auth.Logi
 		return auth.LoginResponseDTO{}, errors.New("invalid credentials")
 	}
 
-	expiresAt := time.Now().Add(time.Hour * 72)
+	expiresAt := time.Now().Add(s.cfg.JWTDuration)
 
 	claims := jwt.MapClaims{
+		"id":    user.ID,
 		"email": user.Email,
 		"exp":   expiresAt.Unix(),
 	}
@@ -40,9 +41,8 @@ func (s *Services) Login(ctx context.Context, email, password string) (auth.Logi
 	}
 
 	return auth.LoginResponseDTO{
-		Name:        user.Name,
+		ID:          user.ID,
 		Email:       user.Email,
-		Image:       user.Image,
 		AccessToken: jwtToken,
 	}, nil
 }

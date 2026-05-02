@@ -4,29 +4,38 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Env struct {
+	Enviroment    string
 	Port          string
 	PathMigration string
 	DatabaseURL   string
 	JWTSecret     string
+	JWTDuration   time.Duration
+	CORSEnabled   bool
+	CORSOrigin    []string
 }
 
 func (c *Config) LoadEnvs() *Env {
 	_ = godotenv.Load()
 
 	return &Env{
-		Port:          c.GetString("PORT", "8080"),
-		PathMigration: c.GetString("PATH_MIGRATION", "file://internal/migrations"),
-		DatabaseURL:   c.GetString("DATABASE_URL", ""),
-		JWTSecret:     c.GetString("JWT_SECRET", "secret"),
+		Enviroment:    c.getString("ENVIROMENT", "development"),
+		Port:          c.getString("PORT", "8080"),
+		PathMigration: c.getString("PATH_MIGRATION", "file://internal/migrations"),
+		DatabaseURL:   c.getString("DATABASE_URL", ""),
+		JWTSecret:     c.getString("JWT_SECRET", "secret"),
+		JWTDuration:   c.getDuration("JWT_DURATION", time.Hour*24*7),
+		CORSEnabled:   c.getBool("CORS_ENABLED", true),
+		CORSOrigin:    c.getSlice("CORS_ORIGIN", "http://localhost:5173"),
 	}
 }
 
-func (Config) GetString(key, defaultValue string) string {
+func (Config) getString(key, defaultValue string) string {
 	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
 	if value != "" {
 		return value
@@ -35,7 +44,57 @@ func (Config) GetString(key, defaultValue string) string {
 	return defaultValue
 }
 
-func (Config) GetInt(key string, defaultValue int) int {
+func (Config) getDuration(key string, defaultValue time.Duration) time.Duration {
+	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
+	if value == "" {
+		return defaultValue
+	}
+
+	if strings.Contains(value, "s") {
+		before, _, _ := strings.Cut(value, "s")
+		int64Value, err := strconv.ParseInt(before, 10, 64)
+		if err != nil {
+			return defaultValue
+		}
+
+		return time.Second * time.Duration(int64Value)
+	}
+
+	if strings.Contains(value, "m") {
+		before, _, _ := strings.Cut(value, "m")
+		int64Value, err := strconv.ParseInt(before, 10, 64)
+		if err != nil {
+			return defaultValue
+		}
+
+		return time.Minute * time.Duration(int64Value)
+	}
+
+	if strings.Contains(value, "h") {
+		before, _, _ := strings.Cut(value, "h")
+		int64Value, err := strconv.ParseInt(before, 10, 64)
+		if err != nil {
+			return defaultValue
+		}
+
+		return time.Hour * time.Duration(int64Value)
+	}
+
+	before, _, found := strings.Cut(value, "d")
+	if !found {
+		return defaultValue
+	}
+
+	int64Value, err := strconv.ParseInt(before, 10, 64)
+	if err != nil {
+		return defaultValue
+	}
+
+	return time.Hour * 24 * time.Duration(int64Value)
+}
+
+/*
+ * func (Config) getInt(key string, defaultValue int) int {
 	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
 	if value == "" {
 		return defaultValue
@@ -47,9 +106,10 @@ func (Config) GetInt(key string, defaultValue int) int {
 	}
 
 	return IntValue
-}
+ }
+*/
 
-func (Config) GetInt64(key string, defaultValue int64) int64 {
+func (Config) getInt64(key string, defaultValue int64) int64 {
 	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
 	if value == "" {
 		return defaultValue
@@ -63,7 +123,7 @@ func (Config) GetInt64(key string, defaultValue int64) int64 {
 	return int64Value
 }
 
-func (Config) GetBool(key string, defaultValue bool) bool {
+func (Config) getBool(key string, defaultValue bool) bool {
 	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
 	if value == "" {
 		return defaultValue
@@ -77,7 +137,8 @@ func (Config) GetBool(key string, defaultValue bool) bool {
 	return boolValue
 }
 
-func (Config) GetFloat64(key string, defaultValue float64) float64 {
+/*
+ * func (Config) getFloat64(key string, defaultValue float64) float64 {
 	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
 	if value == "" {
 		return defaultValue
@@ -89,9 +150,10 @@ func (Config) GetFloat64(key string, defaultValue float64) float64 {
 	}
 
 	return float64Value
-}
+ }
+*/
 
-func (Config) GetSlice(key string, defaultValue ...string) []string {
+func (Config) getSlice(key string, defaultValue ...string) []string {
 	value := strings.TrimSpace(os.Getenv(strings.ToUpper(key)))
 	if value == "" {
 		return defaultValue

@@ -13,15 +13,10 @@ func (r *Repository) Login(ctx context.Context, email string) (entities.User, en
 	var account entities.Account
 	var user entities.User
 
-	if err := r.db.QueryRow(ctx, "SELECT u.*, a.id, a.provider_id, a.account_id, a.password FROM users u JOIN accounts a ON u.id = a.user_id WHERE u.email = $1 AND u.deleted_at IS NULL", email).Scan(
+	if err := r.db.QueryRow(ctx, "SELECT u.id, u.email, u.email_verified, a.id, a.provider_id, a.account_id, a.password FROM users u JOIN accounts a ON u.id = a.user_id WHERE u.email = $1 AND u.deleted_at IS NULL", email).Scan(
 		&user.ID,
-		&user.Name,
 		&user.Email,
 		&user.EmailVerified,
-		&user.Image,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-		&user.DeletedAt,
 		&account.ID,
 		&account.ProviderID,
 		&account.AccountID,
