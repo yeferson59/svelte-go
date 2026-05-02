@@ -29,7 +29,7 @@ func New(app *fiber.App, db *pgxpool.Pool, envs *config.Env) *Bootstrap {
 
 func (b *Bootstrap) Init(ctx context.Context) error {
 	repos := repositories.New(b.db)
-	services := services.New(repos)
+	services := services.New(repos, b.envs)
 	handlers, middlewares := handlers.New(ctx, services), middlewares.New(ctx, b.envs)
 	routes := routes.New(b.app, middlewares, handlers)
 

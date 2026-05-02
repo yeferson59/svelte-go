@@ -1,43 +1,30 @@
 package handlers
 
 import (
-	"time"
+	"fmt"
 
+	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/yeferson59/svelte-go/internal/dtos/auth"
 )
 
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
+func (handler *Handlers) Login(c fiber.Ctx) error {
+	var loginDto auth.LoginRequestDTO
 
-func (h *Handlers) Login(c fiber.Ctx) error {
-	var req LoginRequest
-
-	if err := c.Bind().Body(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	if err := c.Bind().Body(&loginDto); err != nil {
+		return handler.responseBadRequest(c, "", "")
 	}
 
-	claims := jwt.MapClaims{
-		"name":  req.Email,
-		"admin": true,
-		"exp":   time.Now().Add(time.Hour * 72).Unix(),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	t, err := token.SignedString([]byte("secret"))
+	login, err := handler.services.Login(handler.ctx, loginDto.Email, loginDto.Password)
 	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+		return handler.responseFromDomain(c, err, "", "auth:login")
 	}
 
-	return c.JSON(fiber.Map{"token": t})
+	return handler.responseStatusOk(c, "", "", login)
 }
 
 func (handler *Handlers) Register(c fiber.Ctx) error {
-	var registerDto auth.RegisterDTO
+	var registerDto auth.RegisterRequestDTO
 
 	if err := c.Bind().Body(&registerDto); err != nil {
 		return handler.responseBadRequest(c, "", "")
@@ -49,4 +36,12 @@ func (handler *Handlers) Register(c fiber.Ctx) error {
 	}
 
 	return handler.responseStatusOk(c, "", "", user)
+}
+
+func (handler *Handlers) GetSession(c fiber.Ctx) error {
+	jwtToken := jwtware.FromContext(c)
+
+	fmt.Println(jwtToken.Claims)
+
+	return handler.responseStatusOk(c, "", "", "")
 }
