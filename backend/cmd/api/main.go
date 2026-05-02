@@ -24,7 +24,7 @@ func main() {
 	}), config.New()
 	envs := cfg.LoadEnvs()
 	ctx := context.Background()
-	dbPool, err := cfg.ConnectionDB(ctx)
+	dbPool, err := cfg.ConnectionDB(ctx, envs.DatabaseURL)
 	if err != nil {
 		log.Fatal("failed to connect to database: " + err.Error())
 	}
