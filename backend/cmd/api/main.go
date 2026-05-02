@@ -22,8 +22,7 @@ func main() {
 	app, cfg := fiber.New(fiber.Config{
 		StructValidator: new(structValidator{validate: validator.New()}),
 	}), config.New()
-	envs := cfg.LoadEnvs()
-	ctx := context.Background()
+	envs, ctx := cfg.LoadEnvs(), context.Background()
 	dbPool, err := cfg.ConnectionDB(ctx, envs.DatabaseURL)
 	if err != nil {
 		log.Fatal("failed to connect to database: " + err.Error())
