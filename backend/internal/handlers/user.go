@@ -57,7 +57,7 @@ func (handler *Handlers) CreateUser(c fiber.Ctx) error {
 		return handler.responseBadRequest(c, "", err.Error())
 	}
 
-	user, err := handler.services.CreateUser(handler.ctx, createUserDto.Name, createUserDto.Email, createUserDto.Image)
+	user, err := handler.services.CreateUser(handler.ctx, createUserDto.Name, createUserDto.Email)
 	if err != nil {
 		return handler.responseFromDomain(c, err, "", "users:create")
 	}

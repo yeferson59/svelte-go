@@ -18,10 +18,10 @@ func (s *Services) GetUserByID(ctx context.Context, id uuid.UUID) (entities.User
 	return s.repos.GetUserByID(ctx, id)
 }
 
-func (s *Services) CreateUser(ctx context.Context, name, email, image string) (entities.User, error) {
+func (s *Services) CreateUser(ctx context.Context, name, email string) (entities.User, error) {
 	name = helpers.NormalizateNames(name)
 
-	return s.repos.CreateUser(ctx, name, email, image)
+	return s.repos.CreateUser(ctx, name, email)
 }
 
 func (s *Services) UpdateUser(ctx context.Context, id uuid.UUID, name, email, image string) (entities.User, error) {

@@ -38,7 +38,7 @@ func (r *Repository) CreateSession(ctx context.Context, userID uuid.UUID, token 
 }
 
 func (r *Repository) Register(ctx context.Context, name, email, password string) (entities.User, error) {
-	user, err := r.CreateUser(ctx, name, email, "avatar.png")
+	user, err := r.CreateUser(ctx, name, email)
 	if err != nil {
 		return entities.User{}, errors.New("error create new user")
 	}

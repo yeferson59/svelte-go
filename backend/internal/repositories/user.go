@@ -2,9 +2,11 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/yeferson59/svelte-go/internal/entities"
 )
 
@@ -46,14 +48,26 @@ func (r *Repository) GetUserByID(ctx context.Context, id uuid.UUID) (entities.Us
 	return user, nil
 }
 
-func (r *Repository) CreateUser(ctx context.Context, name, email, image string) (entities.User, error) {
-	var user entities.User
+func (r *Repository) CreateUser(ctx context.Context, name, email string) (entities.User, error) {
+	contextTimeout, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
 
-	if err := r.db.QueryRow(ctx, "INSERT INTO users (name, email, image) VALUES ($1, $2, $3) RETURNING *", name, email, image).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.UpdatedAt, &user.CreatedAt, &user.DeletedAt); err != nil {
-		return entities.User{}, err
+	var user entities.User
+	var roleID uuid.UUID
+
+	if tx, err := r.db.BeginTx(contextTimeout, pgx.TxOptions{AccessMode: pgx.ReadWrite}); err == nil {
+		if err := tx.QueryRow(contextTimeout, "SELECT id FROM roles WHERE name = $1", "customer").Scan(&roleID); err != nil {
+			return entities.User{}, errors.New("failed create new user")
+		}
+
+		if tx.QueryRow(contextTimeout, "INSERT INTO users (name, email, role_id) VALUES ($1, $2, $3) RETURNING *", name, email, roleID).Scan(&user.ID, &user.Name, &user.Email, &user.EmailVerified, &user.Image, &user.RoleID, &user.CreatedAt, &user.UpdatedAt, &user.DeletedAt) != nil {
+			return entities.User{}, errors.New("failed create new user")
+		}
+
+		return user, tx.Commit(contextTimeout)
 	}
 
-	return user, nil
+	return user, errors.New("failed create new user")
 }
 
 func (r *Repository) UpdateUser(ctx context.Context, id uuid.UUID, name, email, image string) (entities.User, error) {
