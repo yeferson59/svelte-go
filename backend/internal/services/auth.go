@@ -18,6 +18,10 @@ func (s *Services) Login(ctx context.Context, email, password string) (auth.Logi
 		return auth.LoginResponseDTO{}, err
 	}
 
+	if !user.EmailVerified {
+		return auth.LoginResponseDTO{}, errors.New("invalid account")
+	}
+
 	if !account.ComparePassword(password) {
 		return auth.LoginResponseDTO{}, errors.New("invalid credentials")
 	}
