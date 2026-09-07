@@ -32,11 +32,14 @@
 					entender de un vistazo.
 				</p>
 			</div>
-			<!-- Los mismos rangos que ofrece el panel real. -->
+			<!-- Los mismos rangos que ofrece el panel real. Eran «1M · 6M · 1A ·
+			     Todo», que es el juego de antes del rediseño: hoy son cinco y el año
+			     se llama «1Y». -->
 			<div class="ranges" aria-hidden="true">
 				<span>1M</span>
+				<span>3M</span>
 				<span>6M</span>
-				<span class="on">1A</span>
+				<span class="on">1Y</span>
 				<span>Todo</span>
 			</div>
 		</div>
@@ -46,7 +49,7 @@
 				<div>
 					<div class="panel-label">Patrimonio total · últimos 12 meses</div>
 					<div class="panel-value">
-						<b>$248.500</b>
+						<b>$248,500</b>
 						<em>+12,4%</em>
 					</div>
 				</div>
@@ -61,7 +64,7 @@
 			<div class="metric-row">
 				<div class="mcell">
 					<div class="lbl">Capital invertido</div>
-					<div class="val">$221.100</div>
+					<div class="val">$221,100</div>
 				</div>
 				<div class="mcell">
 					<div class="lbl">Rendimiento</div>

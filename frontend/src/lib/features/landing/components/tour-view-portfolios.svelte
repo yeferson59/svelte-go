@@ -1,154 +1,208 @@
 <script lang="ts">
-	/* Maqueta de `/dashboard/portfolios`: lista de portafolios + posiciones. */
-	import { TOUR_PORTFOLIOS, TOUR_HOLDINGS } from '../product-tour';
+	/*
+	 * Maqueta de `/dashboard/portfolios`.
+	 *
+	 * Eran tres tarjetas de portafolio sobre una tabla de posiciones, que es la
+	 * pantalla anterior al rediseño y además mezclaba dos rutas. Hoy es una lista:
+	 * una fila por portafolio, de mayor a menor, con su perfil de riesgo, la barra
+	 * de capital y ganancia, y el total al pie de su columna. Comparar es lo que
+	 * se viene a hacer aquí, y en una rejilla de tarjetas las cifras caen a una
+	 * altura distinta en cada una.
+	 */
+	import { TOUR_PORTFOLIOS, TOUR_PORTFOLIO_TOTALS } from '../product-tour';
+
+	/** El carril mide lo que el portafolio más grande de la lista. */
+	const scale = Math.max(...TOUR_PORTFOLIOS.map((p) => p.value));
+
+	const width = (amount: number) => `${Math.max(0, Math.min(100, (amount / scale) * 100))}%`;
 </script>
 
 <div class="portfolios">
-	<div class="cards">
-		{#each TOUR_PORTFOLIOS as p (p.name)}
-			<div class="mk-card pcard">
-				<div class="pcard-top">
-					<span class="mk-title">{p.name}</span>
-					<span class="mk-pill">{p.kind}</span>
-				</div>
-				<div class="mk-stat-value">{p.value}</div>
-				<div class="pcard-delta" class:mk-up={p.up} class:mk-dn={!p.up}>{p.delta}</div>
-			</div>
-		{/each}
+	<div class="page-head">
+		<div>
+			<p class="mk-page-title">Portafolios</p>
+			<p class="mk-page-sub">Cómo tienes agrupado tu dinero, y cómo le va a cada grupo.</p>
+		</div>
+		<span class="mk-btn">Crear portafolio</span>
 	</div>
 
-	<div class="mk-card">
-		<div class="holdings-top">
-			<div>
-				<div class="mk-eyebrow">Jubilación</div>
-				<div class="mk-title">Posiciones</div>
-			</div>
-			<span class="mk-pill">4 activos</span>
-		</div>
+	<table class="mk-table">
+		<thead>
+			<tr>
+				<th>Portafolio</th>
+				<th class="col-risk">Riesgo</th>
+				<th class="col-bar">
+					<!-- La cabecera de la columna es la leyenda de la barra: es el único
+					     sitio donde hace falta decir qué significa cada color. -->
+					<span class="legend">
+						<i class="key cost"></i>capital
+						<i class="key gain"></i>ganancia
+					</span>
+				</th>
+				<th class="mk-num">Valor en USD</th>
+				<th class="mk-num">Rendimiento</th>
+			</tr>
+		</thead>
 
-		<div class="mk-table">
-			<div class="mk-row mk-head">
-				<span>Activo</span>
-				<span>Peso</span>
-				<span class="mk-num">Valor</span>
-				<span class="mk-num">Rend.</span>
-			</div>
-			{#each TOUR_HOLDINGS as h (h.symbol)}
-				<div class="mk-row">
-					<span class="asset">
-						<b>{h.symbol}</b>
-						<em>{h.name}</em>
-					</span>
-					<span class="weight">
-						<span class="mk-bar"><span style="width:{h.weight}%"></span></span>
-						<i>{h.weight}%</i>
-					</span>
-					<span class="mk-num">{h.value}</span>
-					<span class="mk-num mk-up">{h.delta}</span>
-				</div>
+		<tbody>
+			{#each TOUR_PORTFOLIOS as row (row.name)}
+				<tr>
+					<th>
+						<span class="who">
+							<span class="mk-name">{row.name}</span>
+							{#if row.isDefault}<em class="tag">predeterminado</em>{/if}
+						</span>
+						<span class="mk-detail">{row.detail}</span>
+					</th>
+
+					<td class="col-risk risk">{row.risk}</td>
+
+					<td class="col-bar">
+						<!-- La gráfica de crecimiento contraída a un instante: el corte cae
+						     siempre en el capital, así que lo que queda dentro es la ganancia
+						     y lo que asoma por fuera es lo que falta para recuperarlo. -->
+						<span class="bar">
+							<span class="held" style="width:{width(Math.min(row.value, row.cost))}"></span>
+							{#if row.up}
+								<span class="gain" style="width:{width(row.value - row.cost)}"></span>
+							{:else}
+								<span class="short" style="width:{width(row.cost - row.value)}"></span>
+							{/if}
+						</span>
+					</td>
+
+					<td class="mk-num">{row.money}</td>
+					<td class="mk-num" class:mk-up={row.up} class:mk-dn={!row.up}>{row.gain}</td>
+				</tr>
 			{/each}
-		</div>
-	</div>
+		</tbody>
+
+		<!-- El total va al pie de su columna, que es donde vive un total. -->
+		<tfoot>
+			<tr class="foot">
+				<th>
+					<span class="mk-name">Total</span>
+					<span class="mk-detail">{TOUR_PORTFOLIO_TOTALS.detail}</span>
+				</th>
+				<td class="col-risk"></td>
+				<td class="col-bar cost-total">{TOUR_PORTFOLIO_TOTALS.cost}</td>
+				<td class="mk-num">{TOUR_PORTFOLIO_TOTALS.value}</td>
+				<td class="mk-num mk-up">{TOUR_PORTFOLIO_TOTALS.gain}</td>
+			</tr>
+		</tfoot>
+	</table>
 </div>
 
 <style>
 	.portfolios {
-		display: flex;
-		flex-direction: column;
-		gap: 14px;
+		--cost: #73819c;
 	}
 
-	.cards {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 10px;
-	}
-
-	.pcard-top {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-		margin-bottom: 12px;
-	}
-
-	.pcard .mk-title {
-		margin-top: 0;
-		font-size: 13px;
-	}
-
-	.pcard-delta {
-		margin-top: 5px;
-		font-size: 11px;
-	}
-
-	.holdings-top {
+	.page-head {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
-		gap: 12px;
-		padding-bottom: 12px;
-		margin-bottom: 4px;
+		gap: 20px;
+		padding-bottom: 16px;
+		margin-bottom: 18px;
 		border-bottom: 1px solid var(--border);
 	}
 
-	.mk-table :global(.mk-row) {
-		grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.7fr);
-	}
-
-	.asset {
+	.who {
 		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
+		align-items: baseline;
+		gap: 7px;
 	}
 
-	.asset b {
-		font-family: var(--font-mono);
-		font-size: 11px;
-		font-weight: 600;
-		color: var(--text);
-	}
-
-	.asset em {
+	.tag {
 		font-style: normal;
-		font-size: 10px;
+		font-size: 8.5px;
 		color: var(--text-dim);
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
 	}
 
-	.weight {
+	.col-risk {
+		width: 16%;
+	}
+
+	.risk {
+		color: var(--text-muted);
+	}
+
+	.col-bar {
+		width: 30%;
+	}
+
+	.legend {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: 5px;
 	}
 
-	.weight :global(.mk-bar) {
-		flex: 1;
+	.key {
+		width: 7px;
+		height: 7px;
+		border-radius: 2px;
 	}
 
-	.weight i {
-		font-style: normal;
-		font-family: var(--font-mono);
+	.key.cost {
+		background: var(--cost);
+	}
+
+	.key.gain {
+		background: var(--green);
+		margin-left: 6px;
+	}
+
+	.bar {
+		display: flex;
+		height: 7px;
+		margin-top: 2px;
+		border-radius: 2px;
+		background: rgba(255, 255, 255, 0.08);
+		overflow: hidden;
+	}
+
+	.held {
+		background: var(--cost);
+	}
+
+	.gain {
+		min-width: 3px;
+		background: var(--green);
+	}
+
+	/*
+	 * Lo que falta para recuperar el capital. Va translúcido porque no es barra:
+	 * es el hueco que dejó al quedarse corta, y el filete derecho marca el
+	 * extremo al que no llegó.
+	 */
+	.short {
+		min-width: 3px;
+		background: rgba(224, 90, 90, 0.32);
+		box-shadow: inset -2px 0 0 var(--red);
+	}
+
+	/* El total va al pie de su columna, separado por un filete propio. */
+	.foot th,
+	.foot td {
+		padding-top: 11px;
+		border-top: 1px solid var(--border);
+	}
+
+	.cost-total {
 		font-size: 9.5px;
 		color: var(--text-dim);
-		width: 26px;
-		text-align: right;
 	}
 
-	@media (max-width: 700px) {
-		.cards {
-			grid-template-columns: minmax(0, 1fr);
+	@media (max-width: 620px) {
+		.page-head {
+			flex-direction: column;
+			gap: 12px;
 		}
 
-		.mk-table :global(.mk-row > :nth-child(2)) {
+		.col-risk,
+		.col-bar {
 			display: none;
-		}
-
-		.mk-table :global(.mk-row) {
-			grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.7fr);
 		}
 	}
 </style>

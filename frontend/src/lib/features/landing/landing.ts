@@ -42,8 +42,8 @@ export function countdownBetween(target: number, now: number): Countdown {
  * así que dibujaba un patrimonio multiplicado por diez mientras el titular
  * decía +12,4%. Estas dos series cuadran entre sí y con las cifras que la
  * landing repite en el hero y en el recorrido del producto: el valor de
- * mercado cierra en $248.500 sobre $221.100 de capital invertido, y esos
- * $27.400 de diferencia son el 12,40% que anuncia la tarjeta.
+ * mercado cierra en $248,500 sobre $221,100 de capital invertido, y esos
+ * $27,400 de diferencia son el 12,40% que anuncia la tarjeta.
  */
 export const METRICS_MONTHS = [
 	'ENE',

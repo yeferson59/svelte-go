@@ -9,9 +9,15 @@
 	 * patrimonio. Las cifras son las de `product-tour.ts`, para que la landing
 	 * cuente el mismo ejemplo de principio a fin.
 	 */
-	import { TOUR_PORTFOLIOS } from '../product-tour';
+	import { TOUR_BREAKDOWN, TOUR_PORTFOLIOS } from '../product-tour';
 
-	const platforms = ['Degiro', 'Binance', 'Revolut', 'IBKR', 'Banco'];
+	/*
+	 * Las plataformas salen del reparto del recorrido y no de una lista propia:
+	 * escritas dos veces, el hero enseñaba cinco marcas y el reparto del panel,
+	 * dos pantallas más abajo, otras tres. La geometría de los hilos de abajo da
+	 * por hechas cinco, así que si cambia el número hay que rehacerlos.
+	 */
+	const platforms = TOUR_BREAKDOWN.map((row) => row.name);
 
 	/** Peso de cada portafolio sobre el patrimonio total, y color de su barra. */
 	const weights = [
@@ -26,7 +32,9 @@
 		<div class="map-top">
 			<div>
 				<div class="map-eyebrow">Tu mapa</div>
-				<div class="map-name">5 plataformas · 3 portafolios</div>
+				<div class="map-name">
+					{platforms.length} plataformas · {TOUR_PORTFOLIOS.length} portafolios
+				</div>
 			</div>
 			<div class="map-status">Al día</div>
 		</div>
@@ -63,11 +71,11 @@
 					<div class="pf">
 						<div class="pf-head">
 							<span class="pf-name">{portfolio.name}</span>
-							<span class="pf-value">{portfolio.value}</span>
+							<span class="pf-value">{portfolio.short}</span>
 						</div>
 						<div class="pf-sub">
-							<span class="pf-kind">{portfolio.kind}</span>
-							<span class="pf-delta" class:dn={!portfolio.up}>{portfolio.delta}</span>
+							<span class="pf-kind">{portfolio.risk}</span>
+							<span class="pf-delta" class:dn={!portfolio.up}>{portfolio.gain}</span>
 						</div>
 						<div class="pf-bar">
 							<span style="width:{weights[i].pct}%; background:{weights[i].color}"></span>
@@ -80,7 +88,7 @@
 		<div class="map-total">
 			<span class="map-total-label">Patrimonio total</span>
 			<span class="map-total-value">
-				<b>$248.500</b>
+				<b>$248,500</b>
 				<em>+12,4%</em>
 			</span>
 		</div>

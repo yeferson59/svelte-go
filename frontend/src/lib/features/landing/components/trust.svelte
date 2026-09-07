@@ -25,7 +25,9 @@
 		},
 		{
 			icon: 'eye',
-			title: 'Modo oculto',
+			/* El nombre que lleva el botón del panel. «Modo oculto» es como se llama
+			   por dentro, y nadie lo lee en ninguna pantalla. */
+			title: 'Ocultar los importes',
 			body: 'Un clic y todos los importes quedan enmascarados. Puedes abrir tu panel en un café o en una reunión sin enseñar tus cifras.'
 		},
 		{

@@ -163,59 +163,67 @@
 /*
  * Maquetas del recorrido "Dentro de Finexia" (`product-tour*.svelte`).
  *
- * Las cuatro vistas comparten el mismo lenguaje de paneles, tablas y cifras que
- * el dashboard real; las clases viven aquí, en global, para no repetir el mismo
- * bloque de CSS en cada componente de vista.
+ * Las cuatro vistas comparten el lenguaje del panel real —secciones a sangre
+ * separadas por un filete, tablas de verdad, cifras en monoespaciada—; las
+ * clases viven aquí, en global, para no repetir el mismo bloque de CSS en cada
+ * componente de vista.
+ *
+ * Eran un juego de tarjetas con antetítulo en versalitas monoespaciadas: la
+ * pantalla que el panel tenía antes del rediseño, que quitó las cinco tarjetas
+ * flotantes y los cinco antetítulos. La maqueta prometía un producto que ya no
+ * existe.
  */
-.mk-card {
-	padding: 16px 18px;
-	border: 1px solid var(--border);
-	border-radius: 10px;
-	background: rgba(255, 255, 255, 0.022);
-	min-width: 0;
+
+/* Una sección de la página, como en el panel: sin caja, separada de la
+   siguiente por un filete. La última no lo lleva. */
+.mk-sec {
+	padding: 14px 0;
+	border-bottom: 1px solid var(--border);
 }
 
-.mk-eyebrow {
-	font-family: var(--font-mono);
-	font-size: 9px;
-	font-weight: 500;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
-	color: var(--text-dim);
+.mk-sec:first-child {
+	padding-top: 0;
 }
 
-.mk-title {
-	margin-top: 4px;
+.mk-sec:last-child {
+	padding-bottom: 0;
+	border-bottom: none;
+}
+
+/* El título de una pantalla de sección, en la serif del panel. */
+.mk-page-title {
 	font-family: var(--font-display);
-	font-weight: 500;
-	font-size: 15px;
-	letter-spacing: -0.01em;
+	font-size: 26px;
+	font-weight: 300;
+	line-height: 1.05;
+	letter-spacing: -0.02em;
 	color: var(--text);
 }
 
-.mk-stats {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 14px;
-}
-
-.mk-stat-label {
-	font-family: var(--font-mono);
-	font-size: 9px;
-	font-weight: 500;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: var(--text-dim);
-}
-
-.mk-stat-value {
+.mk-page-sub {
 	margin-top: 5px;
-	font-family: var(--font-mono);
-	font-weight: 600;
-	font-size: 15px;
-	letter-spacing: -0.01em;
-	font-variant-numeric: tabular-nums;
+	font-size: 11px;
+	font-weight: 300;
+	color: var(--text-muted);
+}
+
+/* El rótulo de una sección dentro de la página. En caja normal y en la
+   tipografía del resto de la interfaz. */
+.mk-h2 {
+	font-size: 13px;
+	font-weight: 500;
 	color: var(--text);
+}
+
+/* La acción principal de una cabecera: un enlace a un formulario, sin halo. */
+.mk-btn {
+	padding: 6px 12px;
+	border-radius: 7px;
+	background: var(--amber);
+	color: #0d0800;
+	font-size: 10.5px;
+	font-weight: 600;
+	white-space: nowrap;
 }
 
 .mk-up {
@@ -230,91 +238,127 @@
 	color: var(--amber-light);
 }
 
-.mk-row {
-	display: grid;
-	align-items: center;
-	gap: 12px;
-	padding: 9px 0;
-	border-top: 1px solid var(--border);
-	font-size: 11.5px;
-	color: var(--text-muted);
-}
-
-.mk-row.mk-head {
-	border-top: none;
-	font-family: var(--font-mono);
-	font-size: 8.5px;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	color: var(--text-dim);
-	padding-bottom: 6px;
-}
-
-.mk-num {
-	font-family: var(--font-mono);
-	font-variant-numeric: tabular-nums;
-	text-align: right;
-	color: var(--text);
-}
-
-.mk-pill {
-	justify-self: start;
-	padding: 3px 8px;
+/* El conmutador de «Dónde está» y el de la gráfica: la misma forma, porque son
+   la misma clase de control. El activo no es una pastilla ámbar —en el panel
+   ese color es el del valor de mercado, no el de «pestaña seleccionada»—. */
+.mk-tabs {
+	display: flex;
+	gap: 2px;
+	padding: 2px;
 	border: 1px solid var(--border);
-	border-radius: 999px;
-	background: var(--surface);
-	font-family: var(--font-mono);
-	font-size: 9px;
-	letter-spacing: 0.06em;
+	border-radius: 7px;
+}
+
+.mk-tab {
+	padding: 3px 8px;
+	border-radius: 5px;
+	font-size: 9.5px;
 	color: var(--text-muted);
 	white-space: nowrap;
 }
 
-.mk-bar {
-	height: 3px;
-	border-radius: 2px;
-	background: rgba(255, 255, 255, 0.07);
+.mk-tab.on {
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--text);
+}
+
+/* Tablas: las del panel van a sangre, con filete bajo cada fila y la última
+   sin él. */
+.mk-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.mk-table thead th {
+	padding: 0 6px 6px 0;
+	border-bottom: 1px solid var(--border);
+	font-size: 9px;
+	font-weight: 400;
+	color: var(--text-dim);
+	text-align: left;
+	white-space: nowrap;
+}
+
+/* El pie entra en la misma regla que el cuerpo: es una fila más de la tabla —el
+   total al pie de su columna— y no un bloque aparte. Fuera de ella un `th` de
+   `tfoot` se pinta centrado y en negrita por defecto del navegador. */
+.mk-table tbody th,
+.mk-table tbody td,
+.mk-table tfoot th,
+.mk-table tfoot td {
+	padding: 8px 6px 8px 0;
+	border-bottom: 1px solid var(--border);
+	font-size: 10.5px;
+	font-weight: 400;
+	color: var(--text);
+	text-align: left;
+	vertical-align: top;
+}
+
+.mk-table tbody tr:last-child th,
+.mk-table tbody tr:last-child td,
+.mk-table tfoot th,
+.mk-table tfoot td {
+	border-bottom: none;
+}
+
+.mk-table th:last-child,
+.mk-table td:last-child {
+	padding-right: 0;
+}
+
+.mk-name {
+	color: var(--text);
+}
+
+.mk-detail {
+	display: block;
+	margin-top: 2px;
+	font-size: 9px;
+	color: var(--text-dim);
+}
+
+/* Cifras en columna: tabulares, porque tienen que cuadrar entre filas. */
+.mk-num {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	white-space: nowrap;
+}
+
+/* Dentro de una tabla hay que decirlo con dos clases: la alineación de la celda
+   la fija `.mk-table tbody td`, que como selector pesa más que `.mk-num` a
+   secas, y las cifras salían pegadas a la izquierda de su columna. */
+.mk-table .mk-num {
+	text-align: right;
+}
+
+/* Una sola serie, así que un solo color y ninguna leyenda: el largo dice la
+   magnitud y el nombre de la fila, de quién es. */
+.mk-track {
+	display: block;
+	height: 5px;
+	border-radius: 3px;
+	background: rgba(255, 255, 255, 0.08);
 	overflow: hidden;
 }
 
-.mk-bar > span {
+.mk-fill {
 	display: block;
 	height: 100%;
-	border-radius: 2px;
+	min-width: 2px;
+	border-radius: 0 3px 3px 0;
 	background: var(--amber);
 }
 
 @media (max-width: 560px) {
-	.mk-card {
-		padding: 13px 14px;
+	.mk-page-title {
+		font-size: 21px;
 	}
 
-	.mk-stats {
-		gap: 10px;
-	}
-
-	.mk-stat-value {
-		font-size: 13px;
-	}
-}
-
-/* Scroll reveal — toggled to `.in` by the IntersectionObserver in +page.svelte */
-.reveal {
-	opacity: 0;
-	transform: translateY(16px);
-	transition:
-		opacity 0.65s ease,
-		transform 0.65s ease;
-}
-.reveal.in {
-	opacity: 1;
-	transform: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.reveal {
-		opacity: 1;
-		transform: none;
-		transition: none;
+	.mk-table thead th,
+	.mk-table tbody th,
+	.mk-table tbody td {
+		padding-right: 4px;
 	}
 }

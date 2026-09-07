@@ -1,13 +1,22 @@
 <script lang="ts">
-	// Scrolling market ticker. The list is duplicated so the CSS animation can
-	// loop seamlessly by translating exactly -50%.
+	/*
+	 * Cinta de cotizaciones. La lista va duplicada para que la animación pueda
+	 * dar la vuelta desplazando exactamente un -50%.
+	 *
+	 * Los importes van en dólares y escritos como los escribe la aplicación
+	 * —`formatCurrency` da a cada moneda su locale, y el dólar se lee en en-US—.
+	 * Estaban a la española y sin ponerse de acuerdo entre ellos: «$67.240» al
+	 * lado de «$189,45», que son el mismo separador diciendo cosas distintas.
+	 * Los porcentajes sí van en es-CO, con coma, y su negativo lleva guion, que
+	 * es el signo que saca `Intl` en ese idioma.
+	 */
 	const tickers = [
-		{ sym: 'BTC', val: '$67.240', delta: '+2,1%', dir: 'up' },
-		{ sym: 'ETH', val: '$3.482', delta: '−0,4%', dir: 'dn' },
-		{ sym: 'AAPL', val: '$189,45', delta: '+0,8%', dir: 'up' },
-		{ sym: 'S&P500', val: '5.234', delta: '+0,6%', dir: 'up' },
-		{ sym: 'EUR/USD', val: '1,0842', delta: '+0,1%', dir: 'up' },
-		{ sym: 'ORO', val: '$2.387', delta: '+0,3%', dir: 'up' },
+		{ sym: 'BTC', val: '$67,240', delta: '+2,1%', dir: 'up' },
+		{ sym: 'ETH', val: '$3,482', delta: '-0,4%', dir: 'dn' },
+		{ sym: 'AAPL', val: '$189.45', delta: '+0,8%', dir: 'up' },
+		{ sym: 'S&P500', val: '5,234', delta: '+0,6%', dir: 'up' },
+		{ sym: 'EUR/USD', val: '1.0842', delta: '+0,1%', dir: 'up' },
+		{ sym: 'ORO', val: '$2,387', delta: '+0,3%', dir: 'up' },
 		{ sym: 'MSFT', val: '$415', delta: '+1,2%', dir: 'up' },
 		{ sym: 'NVDA', val: '$876', delta: '+3,8%', dir: 'up' }
 	];

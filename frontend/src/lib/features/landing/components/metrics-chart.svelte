@@ -73,11 +73,11 @@
 
 	<div class="chart-flag">
 		<div class="t">Este año</div>
-		<div class="v">+ $27.400</div>
+		<div class="v">+ $27,400</div>
 	</div>
 </div>
 
-<p class="axis-note">Eje vertical recortado desde $170.000 para que la variación sea legible.</p>
+<p class="axis-note">Eje vertical recortado desde $170,000 para que la variación sea legible.</p>
 
 <style>
 	.chart-zone {
