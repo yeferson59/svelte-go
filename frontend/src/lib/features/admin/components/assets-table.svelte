@@ -3,7 +3,9 @@
 	 * Catálogo de activos, ordenado por lo que más falta hace mirar.
 	 *
 	 * El precio de mercado no se toca desde aquí: lo sincroniza cada usuario con
-	 * su propia clave. Este campo es el respaldo manual del catálogo, y por eso
+	 * su propia clave. La columna de precio es el respaldo manual del catálogo —el
+	 * atajo para corregir muchas filas seguidas, que es lo que se hace a diario;
+	 * el resto de la ficha se edita en el modal que abre «Editar»—, y por eso
 	 * la tabla se ordena por antigüedad del precio en vez de por ticker: lo que
 	 * lleva semanas sin cambiar es justo lo que hay que corregir, y con cien
 	 * activos en cinco páginas por orden alfabético no aparecía nunca.
@@ -22,9 +24,14 @@
 		assets: Asset[];
 		/** `form` de la página, para el resultado del ajuste por fila. */
 		form: Record<string, unknown> | null;
+		/**
+		 * Abre la ficha completa de un activo. El modal lo pone la página, que es
+		 * quien tiene el estado que lo abre; aquí solo se dice cuál.
+		 */
+		onEdit?: (asset: Asset) => void;
 	}
 
-	let { assets, form }: Props = $props();
+	let { assets, form, onEdit }: Props = $props();
 
 	const PER_PAGE = 20;
 	let page = $state(1);
@@ -63,6 +70,7 @@
 					<th class="num">Precio manual</th>
 					<th>Actualizado</th>
 					<th class="num">Nuevo precio</th>
+					<th><span class="sr-only">Acciones</span></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -128,6 +136,18 @@
 								<p class="row-error">{form.updateError}</p>
 							{:else if saved}
 								<p class="row-note">Precio guardado</p>
+							{/if}
+						</td>
+						<td class="cell-actions">
+							{#if onEdit}
+								<button class="row-action" type="button" onclick={() => onEdit?.(asset)}>
+									Editar
+								</button>
+							{/if}
+							{#if form?.editError && form?.editId === asset.id}
+								<p class="row-error">{form.editError}</p>
+							{:else if form?.editSuccess && form?.editedId === asset.id}
+								<p class="row-note">Cambios guardados</p>
 							{/if}
 						</td>
 					</tr>

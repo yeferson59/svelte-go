@@ -41,6 +41,11 @@ type Repository interface {
 	CreateAssetIfAbsent(ctx context.Context, userID uuid.UUID, ticker, name string, assetType AssetType, exchange string, currency money.Currency) (Asset, error)
 	// CountAssetsContributedBy bounds how much one user can add per day.
 	CountAssetsContributedBy(ctx context.Context, userID uuid.UUID, since time.Time) (int, error)
+	// UpdateAsset rewrites one row by id, which is what an admin editing the
+	// catalog does. Operator-only for the same reason UpsertAsset is: the row it
+	// rewrites may be one every other user is holding. It is addressed by id
+	// rather than by ticker, so unlike the upsert it can also rename one.
+	UpdateAsset(ctx context.Context, assetID uuid.UUID, upd AssetUpdate) (Asset, error)
 	UpdateAssetPrice(ctx context.Context, assetID uuid.UUID, price money.Money) (Asset, error)
 
 	CredentialStore

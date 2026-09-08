@@ -133,6 +133,41 @@ func normalizeAssetInput(ticker, name string, assetType AssetType, exchange stri
 	return in, nil
 }
 
+// UpdateAsset rewrites a catalog row. Operator-only, and the one path that can
+// change what an existing asset says about itself.
+//
+// Everything a create validates, an edit validates the same way: the row ends up
+// in the same table with the same column limits, and the ticker it is renamed to
+// is as untrusted as the one it was created with.
+//
+// The currency is the field with a consequence beyond itself. assets stores the
+// manual price as a bare numeric and reads its currency from this column, so
+// re-denominating an asset silently reinterprets whatever price is there — 190
+// dollars becomes 190 pesos. When the edit carries a new price that is not a
+// problem, the two are written together; when it does not, the repository drops
+// the stale number rather than let the catalog quote a figure in a currency
+// nobody entered it in.
+func (s *service) UpdateAsset(ctx context.Context, assetID uuid.UUID, upd AssetUpdate) (Asset, error) {
+	input, err := normalizeAssetInput(upd.Ticker, upd.Name, upd.AssetType, upd.Exchange, upd.Currency)
+	if err != nil {
+		return Asset{}, err
+	}
+
+	if upd.Price != nil && !upd.Price.IsPositive() {
+		return Asset{}, errAssetPriceInvalid
+	}
+
+	return s.repo.UpdateAsset(ctx, assetID, AssetUpdate{
+		Ticker:    input.ticker,
+		Name:      input.name,
+		AssetType: input.assetType,
+		Exchange:  input.exchange,
+		Currency:  input.currency,
+		IsCurated: upd.IsCurated,
+		Price:     upd.Price,
+	})
+}
+
 func (s *service) UpdateAssetPrice(ctx context.Context, assetID uuid.UUID, price money.Money) (Asset, error) {
 	return s.repo.UpdateAssetPrice(ctx, assetID, price)
 }

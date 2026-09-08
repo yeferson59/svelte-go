@@ -431,6 +431,35 @@ const server = createServer(async (req, res) => {
 			: assets;
 		return send(res, 200, envelope(filtered));
 	}
+	// Edición completa de un activo (admin). Como el resto de escrituras del
+	// stub no persiste: devuelve la fila del fixture con los cambios aplicados,
+	// que es lo que responde el backend, y una recarga vuelve a traer el
+	// original. Lo que se prueba con esto es el viaje de ida y vuelta del
+	// formulario, no el guardado.
+	if (req.method === 'PATCH' && /^\/assets\/[0-9a-f-]{36}$/.test(path)) {
+		const asset = assets.find((a) => a.id === path.split('/')[2]);
+		if (!asset) return send(res, 404, errorEnvelope('asset not found'));
+
+		const body = JSON.parse((await readBody(req)).toString() || '{}');
+
+		return send(
+			res,
+			200,
+			envelope({
+				...asset,
+				ticker: body.ticker ?? asset.ticker,
+				name: body.name ?? asset.name,
+				assetType: body.assetType ?? asset.assetType,
+				currency: body.currency ?? asset.currency,
+				exchange: body.exchange ?? asset.exchange,
+				isCurated: body.isCurated ?? asset.isCurated,
+				// Un cuerpo sin `price` deja el precio manual como estaba; con él,
+				// se reescribe y se sella la fecha.
+				currentPrice: body.price ?? asset.currentPrice,
+				priceUpdatedAt: body.price ? NOW : asset.priceUpdatedAt
+			})
+		);
+	}
 	// ---- Datos de mercado (BYO-key) ----
 	if (route === 'GET /market/credentials') {
 		return send(res, 200, envelope(marketCredentials));

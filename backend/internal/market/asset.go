@@ -61,6 +61,29 @@ type Asset struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// AssetUpdate is the new state of a catalog row, as an operator edit leaves it.
+//
+// A struct rather than eight parameters because two of the fields are optional
+// in a way an argument list hides: a nil IsCurated keeps the audience the row
+// already has, and a nil Price keeps the manual price. Everything else is
+// replaced with what is here, so an edit is read as "this is the row now" and
+// not as a patch whose omissions have to be guessed at.
+type AssetUpdate struct {
+	Ticker    string
+	Name      string
+	AssetType AssetType
+	Exchange  string
+	Currency  money.Currency
+	// IsCurated changes who sees the row: curating it publishes it to every
+	// user, un-curating it puts it back to the users who contributed it. Nil
+	// leaves it as it is.
+	IsCurated *bool
+	// Price is the manual fallback price, written with PriceUpdatedAt set to
+	// now. Nil leaves both alone — except when the currency changes, which
+	// invalidates whatever number is stored (see UpdateAsset).
+	Price *money.Money
+}
+
 // CatalogView is the audience a catalog read is served for: the curated rows,
 // plus the ones ViewerID contributed. All lifts the scope to the whole table
 // and is set only for admins, who moderate what users contribute and would

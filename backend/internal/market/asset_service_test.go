@@ -276,3 +276,185 @@ func actionOf(t *testing.T, resp *http.Response) string {
 
 	return envelope.Action
 }
+
+// Editing a catalog row is the third write to this table, and the only one that
+// can reach a row by id: it renames, re-denominates and un-publishes assets
+// other users may be holding. These tests pin the two things that makes
+// dangerous — the guard on the route, and what happens to a manual price when
+// the currency underneath it changes.
+
+func TestUpdateAsset(t *testing.T) {
+	assetID := uuid.New()
+
+	t.Run("normalizes the same way a create does", func(t *testing.T) {
+		var got AssetUpdate
+
+		repo := new(fakeRepository{
+			updateAsset: func(_ context.Context, id uuid.UUID, upd AssetUpdate) (Asset, error) {
+				if id != assetID {
+					t.Errorf("assetID = %s, want %s", id, assetID)
+				}
+				got = upd
+
+				return Asset{ID: id, Ticker: upd.Ticker}, nil
+			},
+		})
+
+		_, err := newTestServices(repo, newMemStorage()).UpdateAsset(context.Background(), assetID, AssetUpdate{
+			Ticker:    "  ecopetrol ",
+			Name:      "  Ecopetrol S.A. ",
+			AssetType: Stock,
+			Exchange:  " BVC ",
+			Currency:  money.COP,
+		})
+		if err != nil {
+			t.Fatalf("UpdateAsset: %v", err)
+		}
+
+		if got.Ticker != "ECOPETROL" {
+			t.Errorf("ticker = %q, want %q", got.Ticker, "ECOPETROL")
+		}
+		if got.Name != "Ecopetrol S.A." {
+			t.Errorf("name = %q, want it trimmed", got.Name)
+		}
+		if got.Exchange != "BVC" {
+			t.Errorf("exchange = %q, want it trimmed", got.Exchange)
+		}
+		// Neither was sent, and neither may be invented: a nil price keeps the
+		// stored one, a nil flag keeps the audience.
+		if got.Price != nil || got.IsCurated != nil {
+			t.Errorf("price = %v, isCurated = %v, want both nil", got.Price, got.IsCurated)
+		}
+	})
+
+	t.Run("rejects bad input before touching the repository", func(t *testing.T) {
+		zero := mustMoney(t, "0", money.USD)
+		negative := mustMoney(t, "-5", money.USD)
+
+		cases := []struct {
+			name string
+			upd  AssetUpdate
+			want error
+		}{
+			{"empty ticker", AssetUpdate{Ticker: "  ", AssetType: Stock, Currency: money.USD}, errAssetTickerRequired},
+			{"unknown type", AssetUpdate{Ticker: "AAPL", AssetType: AssetType("nft"), Currency: money.USD}, errAssetTypeInvalid},
+			{"invalid currency", AssetUpdate{Ticker: "AAPL", AssetType: Stock, Currency: money.Currency(200)}, errAssetCurrencyInvalid},
+			{"zero price", AssetUpdate{Ticker: "AAPL", AssetType: Stock, Currency: money.USD, Price: &zero}, errAssetPriceInvalid},
+			{"negative price", AssetUpdate{Ticker: "AAPL", AssetType: Stock, Currency: money.USD, Price: &negative}, errAssetPriceInvalid},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				repo := new(fakeRepository{
+					updateAsset: func(context.Context, uuid.UUID, AssetUpdate) (Asset, error) {
+						t.Fatal("invalid input reached the repository")
+
+						return Asset{}, nil
+					},
+				})
+
+				_, err := newTestServices(repo, newMemStorage()).UpdateAsset(context.Background(), assetID, tc.upd)
+				if !errors.Is(err, tc.want) {
+					t.Errorf("err = %v, want %v", err, tc.want)
+				}
+			})
+		}
+	})
+}
+
+func TestHandlerUpdateAsset(t *testing.T) {
+	assetID := uuid.New()
+	body := `{"ticker":"geb","name":"Grupo Energía Bogotá","assetType":"stock","currency":"COP","exchange":"BVC","isCurated":false,"price":{"value":"2450.50","currency":"COP"}}`
+
+	t.Run("a non-admin cannot edit the catalog", func(t *testing.T) {
+		repo := new(fakeRepository{
+			updateAsset: func(context.Context, uuid.UUID, AssetUpdate) (Asset, error) {
+				t.Fatal("a non-admin reached the edit path")
+
+				return Asset{}, nil
+			},
+		})
+
+		resp := request(t, newAssetApp(t, repo, uuid.New(), "user"), http.MethodPatch, "/assets/"+assetID.String(), body)
+		if resp.StatusCode != fiber.StatusForbidden {
+			t.Fatalf("status = %d, want 403", resp.StatusCode)
+		}
+	})
+
+	t.Run("an admin's edit carries every field, including the ones whose zero value means something", func(t *testing.T) {
+		var got AssetUpdate
+
+		repo := new(fakeRepository{
+			updateAsset: func(_ context.Context, id uuid.UUID, upd AssetUpdate) (Asset, error) {
+				if id != assetID {
+					t.Errorf("assetID = %s, want %s", id, assetID)
+				}
+				got = upd
+
+				return Asset{ID: id, Ticker: upd.Ticker}, nil
+			},
+		})
+
+		resp := request(t, newAssetApp(t, repo, uuid.New(), "admin"), http.MethodPatch, "/assets/"+assetID.String(), body)
+		if resp.StatusCode != fiber.StatusOK {
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+
+		if got.Ticker != "GEB" || got.Currency != money.COP || got.Exchange != "BVC" {
+			t.Errorf("update = %+v, want the body's fields normalized", got)
+		}
+		// The one a plain bool would have swallowed: un-curating is what takes
+		// a row off the shared catalog, and it is spelled `false`.
+		if got.IsCurated == nil || *got.IsCurated {
+			t.Errorf("isCurated = %v, want an explicit false", got.IsCurated)
+		}
+		if got.Price == nil || got.Price.String() != "2450.5" {
+			t.Errorf("price = %v, want 2450.50", got.Price)
+		}
+	})
+
+	t.Run("a rename onto an existing ticker answers 409", func(t *testing.T) {
+		repo := new(fakeRepository{
+			updateAsset: func(context.Context, uuid.UUID, AssetUpdate) (Asset, error) {
+				return Asset{}, errAssetDuplicate
+			},
+		})
+
+		resp := request(t, newAssetApp(t, repo, uuid.New(), "admin"), http.MethodPatch, "/assets/"+assetID.String(), body)
+		if resp.StatusCode != fiber.StatusConflict {
+			t.Fatalf("status = %d, want 409", resp.StatusCode)
+		}
+		if action := actionOf(t, resp); !strings.Contains(action, "ya existe") {
+			t.Errorf("action = %q, want it to say the ticker is taken", action)
+		}
+	})
+
+	t.Run("an internal failure keeps the schema out of the response", func(t *testing.T) {
+		repo := new(fakeRepository{
+			updateAsset: func(context.Context, uuid.UUID, AssetUpdate) (Asset, error) {
+				return Asset{}, errors.New(`pq: null value in column "currency" violates not-null constraint`)
+			},
+		})
+
+		resp := request(t, newAssetApp(t, repo, uuid.New(), "admin"), http.MethodPatch, "/assets/"+assetID.String(), body)
+		if resp.StatusCode != fiber.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500", resp.StatusCode)
+		}
+		if action := actionOf(t, resp); strings.Contains(action, "constraint") {
+			t.Errorf("action = %q, want the schema kept out of the response", action)
+		}
+	})
+}
+
+// mustMoney builds an amount from the text a request body would carry, which is
+// also how the price reaches the service.
+func mustMoney(t *testing.T, value string, currency money.Currency) money.Money {
+	t.Helper()
+
+	m, err := money.NewMoneyFromString(value, currency)
+	if err != nil {
+		t.Fatalf("money %q: %v", value, err)
+	}
+
+	return m
+}

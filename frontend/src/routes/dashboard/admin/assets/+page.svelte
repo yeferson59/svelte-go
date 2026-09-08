@@ -2,7 +2,14 @@
 	import PageHeader from '$lib/ui/page-header.svelte';
 	import Button from '$lib/ui/button.svelte';
 	import Modal from '$lib/ui/modal.svelte';
-	import { AssetCreateForm, AssetsTable, ImportCard, type ImportResult } from '$lib/features/admin';
+	import {
+		AssetCreateForm,
+		AssetEditForm,
+		AssetsTable,
+		ImportCard,
+		type Asset,
+		type ImportResult
+	} from '$lib/features/admin';
 	import { flash } from '$lib/shared/flash.svelte';
 
 	import type { PageProps } from './$types';
@@ -11,6 +18,9 @@
 
 	let showCreateForm = $state(false);
 	let showImportForm = $state(false);
+	// El activo que se está editando, no un booleano: el modal necesita saber
+	// cuál para llenar la ficha, y `null` es lo que lo mantiene cerrado.
+	let editing = $state<Asset | null>(null);
 	const created = flash();
 
 	const importResult = $derived((form?.importResult ?? null) as ImportResult | null);
@@ -79,7 +89,24 @@
 	</ImportCard>
 </Modal>
 
-<AssetsTable assets={data.assets} {form} />
+<Modal
+	open={editing !== null}
+	title="Editar activo"
+	description="Los cambios los ve todo el mundo: es la misma fila del catálogo que usan todas las cuentas."
+	onClose={() => (editing = null)}
+	size="lg"
+>
+	{#if editing}
+		<AssetEditForm
+			asset={editing}
+			error={form?.editId === editing.id ? ((form?.editError ?? '') as string) : ''}
+			onCancel={() => (editing = null)}
+			onSuccess={() => (editing = null)}
+		/>
+	{/if}
+</Modal>
+
+<AssetsTable assets={data.assets} {form} onEdit={(asset) => (editing = asset)} />
 
 <style>
 	.page-flash {

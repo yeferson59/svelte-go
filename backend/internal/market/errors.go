@@ -30,6 +30,15 @@ var (
 	errAssetExchangeTooLong = httpx.AsBadRequest(errors.New("el mercado supera el máximo de caracteres"))
 	errAssetTypeInvalid     = httpx.AsBadRequest(errors.New("el tipo de activo debe ser uno de: stock, etf, crypto, bond, cash, real_estate, commodity, other"))
 	errAssetCurrencyInvalid = httpx.AsBadRequest(errors.New("la moneda debe ser un código ISO de 3 letras"))
+	// errAssetPriceInvalid guards the manual price an edit may carry. Creation
+	// has no counterpart because a new row starts without one: a price only
+	// reaches this table through an update.
+	errAssetPriceInvalid = httpx.AsBadRequest(errors.New("el precio manual debe ser mayor que 0"))
+	// errAssetDuplicate is the unique index on (ticker, exchange) answering an
+	// edit that would rename a row onto one that already exists. A 409 rather
+	// than a 400: the request is well formed, the catalog just already has that
+	// instrument.
+	errAssetDuplicate = httpx.AsConflict(errors.New("ya existe un activo con ese ticker en ese mercado"))
 
 	// ErrAssetQuotaExceeded is a 429 rather than a 403: the user is allowed to
 	// contribute assets, just not this many more today.
@@ -45,19 +54,31 @@ var (
 )
 
 // assetFailureDetail returns the message only when this package authored it.
-// Anything else — a driver error, a constraint name — is replaced, so a failed
-// insert cannot echo the schema back over the wire.
-func assetFailureDetail(err error) string {
+// Anything else — a driver error, a constraint name — is replaced by fallback,
+// so a failed write cannot echo the schema back over the wire.
+//
+// The fallback is the caller's because the two writes fail differently to the
+// person reading the message: one could not create the asset, the other could
+// not save the changes to one already on screen.
+func assetFailureDetail(err error, fallback string) string {
+	// Written out rather than listed below because the sentinel's own text is
+	// English — it is matched by name across modules — and this string is read
+	// by the person who pressed the button.
+	if errors.Is(err, ErrAssetNotFound) {
+		return "Este activo ya no está en el catálogo."
+	}
+
 	for _, domain := range []error{
 		errAssetTickerRequired, errAssetTickerTooLong, errAssetExchangeTooLong,
-		errAssetTypeInvalid, errAssetCurrencyInvalid, ErrAssetQuotaExceeded,
+		errAssetTypeInvalid, errAssetCurrencyInvalid, errAssetPriceInvalid,
+		errAssetDuplicate, ErrAssetQuotaExceeded,
 	} {
 		if errors.Is(err, domain) {
 			return err.Error()
 		}
 	}
 
-	return "No se pudo crear el activo"
+	return fallback
 }
 
 // BYO-key errors. A user with no key is not a failure of the application, so

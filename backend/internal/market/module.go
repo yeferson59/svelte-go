@@ -120,6 +120,11 @@ func (m *Module) Routes(router fiber.Router) {
 	// The bulk path stays curated: an uploaded sheet upserts, so it can rewrite
 	// rows other users hold. A user's bulk route is the transaction importer.
 	assests.Post("/import", admin, m.handler.ImportAssets)
+	// Editing is admin-only for the same reason the bulk path is: this one
+	// addresses an existing row by id, so it rewrites what every user holding
+	// that asset sees. Registered after /import so the literal segment is not
+	// swallowed by the parameter.
+	assests.Patch("/:id", admin, m.handler.UpdateAsset)
 
 	exchangeRates := router.Group("/exchange-rates")
 	exchangeRates.Use(m.authMiddl.RequireAuth(), m.limiter)

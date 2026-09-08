@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
 	assetCreateSchema,
 	assetPriceSchema,
+	assetUpdateSchema,
 	inviteUserSchema,
 	rateCreateSchema,
 	rateUpdateSchema,
@@ -114,6 +115,68 @@ describe('assetPriceSchema', () => {
 
 	it('cae a USD cuando la fila no trae moneda', () => {
 		expect(assetPriceSchema.parse({ id: 'a1', price: '10' }).currency).toBe('USD');
+	});
+});
+
+describe('assetUpdateSchema', () => {
+	/** Ficha completa tal como la manda el formulario de edición. */
+	const full = {
+		id: 'a1',
+		ticker: ' aapl ',
+		name: ' Apple Inc. ',
+		assetType: 'stock',
+		currency: 'usd',
+		exchange: ' NASDAQ ',
+		isCurated: 'on',
+		price: ' 190.50 '
+	};
+
+	it('normaliza los mismos campos que el alta y conserva el id', () => {
+		expect(assetUpdateSchema.parse(full)).toEqual({
+			id: 'a1',
+			ticker: 'AAPL',
+			name: 'Apple Inc.',
+			assetType: 'stock',
+			currency: 'USD',
+			exchange: 'NASDAQ',
+			isCurated: true,
+			price: '190.50'
+		});
+	});
+
+	// El checkbox no manda nada cuando está desmarcado, así que `null` es la
+	// forma en que un formulario dice «quítalo del catálogo compartido».
+	it('lee el checkbox ausente como una despublicación explícita', () => {
+		expect(assetUpdateSchema.parse({ ...full, isCurated: null }).isCurated).toBe(false);
+		expect(assetUpdateSchema.parse({ ...full, isCurated: undefined }).isCurated).toBe(false);
+	});
+
+	it('admite el precio en blanco, que deja el guardado como está', () => {
+		expect(assetUpdateSchema.parse({ ...full, price: '  ' }).price).toBe('');
+	});
+
+	it('conserva el precio como texto, con sus decimales de cola', () => {
+		expect(assetUpdateSchema.parse({ ...full, price: '190.00' }).price).toBe('190.00');
+	});
+
+	it('rechaza un precio que no es un número positivo', () => {
+		expect(firstError(assetUpdateSchema.safeParse({ ...full, price: '0' }))).toBe(
+			'Precio inválido'
+		);
+		expect(firstError(assetUpdateSchema.safeParse({ ...full, price: 'gratis' }))).toBe(
+			'Precio inválido'
+		);
+	});
+
+	it('exige el id de la fila que se está editando', () => {
+		expect(firstError(assetUpdateSchema.safeParse({ ...full, id: '  ' }))).toBe('ID requerido');
+	});
+
+	it('da el mismo aviso del alta falte el campo que falte', () => {
+		for (const missing of ['ticker', 'name', 'assetType', 'currency']) {
+			const result = assetUpdateSchema.safeParse({ ...full, [missing]: '' });
+			expect(firstError(result)).toBe('Ticker, nombre, tipo y moneda son requeridos');
+		}
 	});
 });
 

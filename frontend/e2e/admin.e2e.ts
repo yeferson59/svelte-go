@@ -63,6 +63,32 @@ test.describe('admin', () => {
 		await expect(page.locator('input[type="file"][name="file"]')).toBeVisible();
 	});
 
+	// La ficha completa: lo que la columna de precio no alcanza —el ticker, el
+	// nombre, el tipo, la moneda y quién ve la fila— y que antes obligaba a
+	// volver a darla de alta con el mismo ticker para corregir una errata.
+	test('edits an asset from the catalogue', async ({ page }) => {
+		await login(page, ADMIN_EMAIL);
+		await page.goto('/dashboard/admin/assets');
+
+		const row = page.locator('tr', { hasText: 'AAPL' });
+		await row.getByRole('button', { name: 'Editar' }).click();
+
+		await expect(page.getByRole('heading', { name: 'Editar activo' })).toBeVisible();
+		// La ficha llega llena: es una corrección, no un alta.
+		await expect(page.locator('#edit-ticker')).toHaveValue('AAPL');
+		await expect(page.locator('#edit-name')).toHaveValue('Apple Inc.');
+		await expect(page.locator('#edit-type')).toHaveValue('stock');
+		await expect(page.locator('#edit-currency')).toHaveValue('USD');
+		// El precio nuevo se pide en blanco: dejarlo así conserva el guardado.
+		await expect(page.locator('#edit-price')).toHaveValue('');
+
+		await page.locator('#edit-name').fill('Apple Inc. (corregido)');
+		await page.getByRole('button', { name: 'Guardar cambios' }).click();
+
+		await expect(page.getByRole('heading', { name: 'Editar activo' })).not.toBeVisible();
+		await expect(row.getByText('Cambios guardados')).toBeVisible();
+	});
+
 	test('lists the exchange rates and opens the create form', async ({ page }) => {
 		await login(page, ADMIN_EMAIL);
 		await page.goto('/dashboard/admin/exchange-rates');

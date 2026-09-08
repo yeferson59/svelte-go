@@ -15,6 +15,25 @@ type CreateAssetRequestDTO struct {
 	Currency  money.Currency `json:"currency"  validate:"required"`
 }
 
+// UpdateAssetRequestDTO is a catalog row as the operator wants it to read from
+// now on: the identifying fields travel whole, so an edit that only changes the
+// name still sends the ticker it is keeping.
+//
+// The last two are pointers because they are the fields whose zero value is a
+// legitimate instruction. A body with no isCurated leaves the audience alone,
+// and one with `false` hides the row from everybody but its contributors; a
+// body with no price leaves the manual price alone, which is not the same as
+// clearing it.
+type UpdateAssetRequestDTO struct {
+	Ticker    string         `json:"ticker"    validate:"required"`
+	Name      string         `json:"name"      validate:"required"`
+	AssetType string         `json:"assetType" validate:"required"`
+	Exchange  string         `json:"exchange"`
+	Currency  money.Currency `json:"currency"  validate:"required"`
+	IsCurated *bool          `json:"isCurated"`
+	Price     *money.Money   `json:"price"`
+}
+
 type CreateExchangeRateRequestDTO struct {
 	FromCurrency money.Currency  `json:"fromCurrency" validate:"required"`
 	ToCurrency   money.Currency  `json:"toCurrency"   validate:"required"`

@@ -84,6 +84,26 @@ export function createAsset(
 	});
 }
 
+/**
+ * `PATCH /assets/:id` — reescribe un activo del catálogo (admin).
+ *
+ * Es la única vía que llega a una fila por id, así que también es la única que
+ * puede renombrarla, cambiarle la moneda o sacarla del catálogo compartido.
+ * `isCurated` y `price` son opcionales en el cuerpo: omitirlos deja el público
+ * y el precio manual como estaban, que no es lo mismo que borrarlos.
+ */
+export function updateAsset(
+	event: ApiEvent,
+	id: string,
+	body: Record<string, unknown>
+): Promise<ApiResult<Asset>> {
+	return apiRequest<Asset>(event, `/assets/${id}`, {
+		method: 'PATCH',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body)
+	});
+}
+
 /** `POST /assets/import` — import masivo de assets (multipart). */
 export function importAssets(event: ApiEvent, form: FormData): Promise<ApiResult<ImportResult>> {
 	return apiRequest<ImportResult>(event, '/assets/import', { method: 'POST', body: form });

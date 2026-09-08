@@ -9,6 +9,7 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/yeferson59/gofinance/v2/money"
 
 	"github.com/yeferson59/finexia-app/internal/platform/database"
@@ -134,6 +135,86 @@ func (r *PostgresRepository) UpdateAssetPrice(ctx context.Context, assetID uuid.
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Asset{}, ErrAssetNotFound
 		}
+		return Asset{}, err
+	}
+
+	if asset.CurrentPrice != nil {
+		asset.CurrentPrice.SetCurrency(asset.Currency)
+	}
+
+	return asset, nil
+}
+
+// pgUniqueViolation is the SQLSTATE Postgres returns for a unique constraint
+// violation (23505). On this table it can only be idx_assets_ticker_exchange:
+// the edit renamed a row onto a (ticker, exchange) pair that already exists.
+const pgUniqueViolation = "23505"
+
+// UpdateAsset writes an operator's edit of a catalog row.
+//
+// The price is the only field that is not a plain assignment. A nil Price
+// normally leaves the stored number and its timestamp alone — but the currency
+// is what gives that number its meaning, so when the edit re-denominates the
+// asset without supplying a new price, both are cleared. Keeping them would
+// leave the catalog showing a figure in a currency nobody quoted it in, and
+// showing nothing is the truthful answer until an admin or a sync fills it
+// again. a.currency in the CASE is the row's old value: in an UPDATE every SET
+// expression reads the pre-update row.
+func (r *PostgresRepository) UpdateAsset(ctx context.Context, assetID uuid.UUID, upd AssetUpdate) (Asset, error) {
+	var asset Asset
+
+	// Both optional fields reach the query as an untyped nil when unset, which
+	// pgx sends as NULL for the casts below to fall back on.
+	var curated, price any
+	if upd.IsCurated != nil {
+		curated = *upd.IsCurated
+	}
+	if upd.Price != nil {
+		price = upd.Price.String()
+	}
+
+	err := r.db.QueryRow(ctx, `
+		UPDATE assets a
+		SET ticker = $2,
+		    name = $3,
+		    asset_type = $4::asset_type,
+		    exchange = NULLIF($5, ''),
+		    currency = $6,
+		    is_curated = COALESCE($7::boolean, a.is_curated),
+		    current_price = CASE
+		        WHEN $8::numeric IS NOT NULL THEN $8::numeric
+		        WHEN a.currency IS DISTINCT FROM $6 THEN NULL
+		        ELSE a.current_price END,
+		    price_updated_at = CASE
+		        WHEN $8::numeric IS NOT NULL THEN NOW()
+		        WHEN a.currency IS DISTINCT FROM $6 THEN NULL
+		        ELSE a.price_updated_at END,
+		    updated_at = NOW()
+		WHERE a.id = $1
+		RETURNING `+assetColumns+`
+	`, assetID, upd.Ticker, upd.Name, upd.AssetType, upd.Exchange, upd.Currency, curated, price).Scan(
+		&asset.ID,
+		&asset.Ticker,
+		&asset.Name,
+		&asset.AssetType,
+		&asset.Exchange,
+		&asset.Currency,
+		&asset.CurrentPrice,
+		&asset.PriceUpdatedAt,
+		&asset.IsCurated,
+		&asset.CreatedAt,
+		&asset.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Asset{}, ErrAssetNotFound
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation {
+			return Asset{}, errAssetDuplicate
+		}
+
 		return Asset{}, err
 	}
 

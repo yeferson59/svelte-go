@@ -675,6 +675,7 @@ significa la columna «Moneda» del archivo para los importes que etiqueta.
 | Método | Path | Acceso | Descripción |
 |---|---|---|---|
 | POST | `/assets` | usuario | Añade un asset al catálogo |
+| PATCH | `/assets/:id` | admin | Edita un asset del catálogo (ficha completa) |
 | POST | `/assets/import` | admin | Import masivo de assets |
 
 `POST /assets` hace dos cosas distintas según quién llame, con el mismo cuerpo
@@ -697,6 +698,26 @@ catálogo era del operador porque el operador pagaba la cuota. Con BYO-key cada
 usuario sincroniza sus propias tenencias con su propia clave, y el import de
 transacciones (§2.7) ya creaba filas para cualquier usuario que subiera un
 archivo — la puerta solo estaba cerrada por delante.
+
+`PATCH /assets/:id` es la edición completa, y es **admin**: llega a una fila por
+id —no por ticker—, así que es la única vía que puede renombrar un activo,
+cambiarle la moneda o sacarlo del catálogo compartido, y esa fila puede ser una
+que otros usuarios tengan en cartera.
+
+El cuerpo lleva la ficha entera (`ticker`, `name`, `assetType`, `currency`,
+`exchange`) más dos campos opcionales cuyo valor «vacío» significa algo:
+
+| Campo | Omitido | Presente |
+|---|---|---|
+| `isCurated` | deja el público como está | `true` publica la fila para todas las cuentas; `false` la devuelve a quienes la aportaron |
+| `price` | deja el precio manual como está | `{ "value": "190.50", "currency": "USD" }` lo reescribe y sella `priceUpdatedAt` |
+
+Cambiar `currency` **sin** mandar `price` borra el precio manual y su fecha:
+`assets.current_price` es un número sin moneda propia, así que re-denominar el
+activo convertiría 190 dólares en 190 pesos sin que nadie lo hubiera escrito.
+Renombrar sobre un `(ticker, exchange)` que ya existe responde `409`. El ajuste
+rápido de solo el precio sigue siendo `PATCH /portfolios/assets/:id/price`
+(§2.7).
 
 El catálogo que devuelve `GET /portfolios/assets` está acotado en consecuencia:
 las filas curadas más las que ha aportado el llamante. Un admin ve la tabla

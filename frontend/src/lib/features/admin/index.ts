@@ -15,6 +15,7 @@ export { default as InvitationsTable } from './components/invitations-table.svel
 export { default as WaitlistTable } from './components/waitlist-table.svelte';
 export { default as UsersTable } from './components/users-table.svelte';
 export { default as AssetCreateForm } from './components/asset-create-form.svelte';
+export { default as AssetEditForm } from './components/asset-edit-form.svelte';
 export { default as AssetsTable } from './components/assets-table.svelte';
 export { default as ExchangeRateCreateForm } from './components/exchange-rate-create-form.svelte';
 export { default as ExchangeRatesTable } from './components/exchange-rates-table.svelte';

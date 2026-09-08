@@ -60,10 +60,45 @@ func (h *handler) CreateAsset(c fiber.Ctx) error {
 	}
 
 	if err != nil {
-		return httpx.FromDomain(c, err, "Error creating asset", assetFailureDetail(err))
+		return httpx.FromDomain(c, err, "Error creating asset", assetFailureDetail(err, "No se pudo crear el activo"))
 	}
 
 	return httpx.Success(c, fiber.StatusCreated, "Asset created", "Asset created successfully", asset)
+}
+
+// UpdateAsset rewrites a catalog row: its ticker, name, type, exchange,
+// currency, who sees it, and the manual price.
+//
+// Admin-only, unlike CreateAsset above, and the guard is on the route. The two
+// are not the same request wearing different roles: creating names an
+// instrument that was missing, while this reaches an existing row by id — one
+// that other users may hold positions in — and can rename it, re-denominate it
+// or take it off the shared catalog.
+func (h *handler) UpdateAsset(c fiber.Ctx) error {
+	assetID, err := httpx.ParamUUID(c, "id")
+	if err != nil {
+		return httpx.BadRequest(c, "Invalid asset ID", err.Error())
+	}
+
+	req, err := httpx.Bind[UpdateAssetRequestDTO](c)
+	if err != nil {
+		return httpx.BadRequest(c, "Invalid request", err.Error())
+	}
+
+	asset, err := h.service.UpdateAsset(c, assetID, AssetUpdate{
+		Ticker:    req.Ticker,
+		Name:      req.Name,
+		AssetType: AssetType(req.AssetType),
+		Exchange:  req.Exchange,
+		Currency:  req.Currency,
+		IsCurated: req.IsCurated,
+		Price:     req.Price,
+	})
+	if err != nil {
+		return httpx.FromDomain(c, err, "Error updating asset", assetFailureDetail(err, "No se pudo actualizar el activo"))
+	}
+
+	return httpx.OK(c, "Asset updated", "Asset updated successfully", asset)
 }
 
 func (h *handler) GetExchangeRates(c fiber.Ctx) error {

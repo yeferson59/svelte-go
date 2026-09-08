@@ -60,6 +60,37 @@ export const assetPriceSchema = z.object({
 	currency: z.string().trim().min(1).default('USD')
 });
 
+/**
+ * Edición completa de un activo del catálogo.
+ *
+ * Los cinco campos de identidad son los mismos del alta y comparten su mensaje,
+ * porque el formulario los manda siempre enteros: editar el nombre reenvía
+ * también el ticker que se conserva.
+ *
+ * Los dos últimos son de la edición y solo de ella. `isCurated` llega del
+ * checkbox, que no envía nada cuando está desmarcado, así que se normaliza a
+ * booleano aquí en vez de dejar que «ausente» signifique dos cosas. `price` es
+ * opcional —quedarse en blanco deja el precio manual como estaba— y se valida
+ * como número, pero al backend viaja el texto tal cual, igual que en el ajuste
+ * rápido de la tabla.
+ */
+export const assetUpdateSchema = z.object({
+	id: rowIdSchema,
+	ticker: z.string().trim().toUpperCase().min(1, REQUIRED_ASSET_FIELDS),
+	name: z.string().trim().min(1, REQUIRED_ASSET_FIELDS),
+	assetType: z.string().trim().min(1, REQUIRED_ASSET_FIELDS),
+	currency: z.string().trim().toUpperCase().min(1, REQUIRED_ASSET_FIELDS),
+	exchange: z.string().trim().default(''),
+	isCurated: z
+		.union([z.string(), z.boolean(), z.null(), z.undefined()])
+		.transform((v) => v === true || v === 'on' || v === 'true'),
+	price: z
+		.string()
+		.trim()
+		.default('')
+		.refine((v) => v === '' || (Number.isFinite(Number(v)) && Number(v) > 0), 'Precio inválido')
+});
+
 /** Alta de una tasa de cambio. */
 const REQUIRED_RATE_FIELDS = 'Moneda origen, destino y tasa son requeridos';
 

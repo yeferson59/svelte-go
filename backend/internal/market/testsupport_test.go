@@ -34,6 +34,7 @@ type fakeRepository struct {
 	upsertPublicExchangeRate func(ctx context.Context, from, to money.Currency, rate decimal.Decimal, rateDate time.Time, source ProviderID) (ExchangeRate, error)
 	getExchangeRates         func(ctx context.Context, offset, limit uint) ([]ExchangeRate, error)
 
+	updateAsset         func(ctx context.Context, assetID uuid.UUID, upd AssetUpdate) (Asset, error)
 	updateAssetPrice    func(ctx context.Context, assetID uuid.UUID, price money.Money) (Asset, error)
 	upsertAsset         func(ctx context.Context, ticker, name string, assetType AssetType, exchange string, currency money.Currency) (Asset, error)
 	createAssetIfAbsent func(ctx context.Context, userID uuid.UUID, ticker, name string, assetType AssetType, exchange string, currency money.Currency) (Asset, error)
@@ -53,6 +54,13 @@ func (f *fakeRepository) UpsertPublicExchangeRate(ctx context.Context, from, to 
 
 func (f *fakeRepository) GetExchangeRates(ctx context.Context, offset, limit uint) ([]ExchangeRate, error) {
 	return f.getExchangeRates(ctx, offset, limit)
+}
+
+func (f *fakeRepository) UpdateAsset(ctx context.Context, assetID uuid.UUID, upd AssetUpdate) (Asset, error) {
+	if f.updateAsset == nil {
+		return Asset{}, nil
+	}
+	return f.updateAsset(ctx, assetID, upd)
 }
 
 func (f *fakeRepository) UpdateAssetPrice(ctx context.Context, assetID uuid.UUID, price money.Money) (Asset, error) {
