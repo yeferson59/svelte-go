@@ -8,11 +8,13 @@
 	import {
 		AssetConcentrationBand,
 		AssetHoldingsList,
-		toAssetHoldingRows
+		AssetPricePanel,
+		toAssetHoldingRows,
+		type AssetHoldingRow
 	} from '$lib/features/portfolio';
 	import type { PageProps } from './$types';
 
-	const { data }: PageProps = $props();
+	const { data, form }: PageProps = $props();
 
 	// De mayor a menor una sola vez, aquí: la barra de concentración y la lista
 	// son la misma lectura en dos formas, y si cada una ordenara por su cuenta
@@ -33,6 +35,14 @@
 
 	/** Activo señalado, compartido por la barra y la lista. */
 	let active = $state<string | null>(null);
+
+	/*
+	 * Activo abierto en el panel. Se guarda el id y no la fila: al actualizar un
+	 * precio la acción recarga los holdings, y una fila copiada aquí seguiría
+	 * enseñando el precio viejo con el panel abierto encima.
+	 */
+	let openedId = $state<string | null>(null);
+	const opened = $derived(rows.find((row) => row.assetId === openedId) ?? null);
 
 	function fmt(value: number): string {
 		return formatCurrency(value, displayCurrency);
@@ -89,7 +99,15 @@
 	{displayCurrency}
 	formatValue={fmt}
 	onGoToPortfolios={goToPortfolios}
+	onOpen={(row: AssetHoldingRow) => (openedId = row.assetId)}
 	bind:active
+/>
+
+<AssetPricePanel
+	row={opened}
+	credentials={data.credentials}
+	{form}
+	onClose={() => (openedId = null)}
 />
 
 <style>

@@ -136,6 +136,13 @@ export const assetHoldingSchema = z.object({
 	/** En cuántos portafolios del usuario aparece el activo. */
 	portfolios: z.number(),
 	priceSource: z.string(),
+	/**
+	 * Proveedor cuya clave trajo `marketPrice`, y cuándo lo trajo. Solo vienen
+	 * cuando `priceSource` es `own`: un precio manual del catálogo y una
+	 * posición a coste no salen de ningún proveedor.
+	 */
+	priceProvider: z.string().optional(),
+	priceFetchedAt: z.string().optional(),
 	positionsUnconverted: z.number()
 });
 

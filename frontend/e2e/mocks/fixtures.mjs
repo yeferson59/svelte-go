@@ -264,6 +264,11 @@ export const assetHoldings = (() => {
 			// Todo el catálogo del fixture tiene precio y está en USD: nada se
 			// valora a coste y no hay nada que convertir.
 			priceSource: 'own',
+			// Con `priceSource: 'own'` el backend dice de qué clave salió el
+			// precio y cuándo: es lo que el panel del activo necesita para saber
+			// a quién repreguntar.
+			priceProvider: 'finnhub',
+			priceFetchedAt: NOW,
 			positionsUnconverted: 0
 		}));
 })();
@@ -602,3 +607,30 @@ export const importPreview = {
 		errors
 	}))
 };
+
+/*
+ * `GET /market/credentials` — las claves de proveedor de la cuenta.
+ *
+ * Nunca traen la clave: proveedor, cuatro últimos caracteres y estado, que es
+ * todo lo que el backend sirve de ellas. Dos filas y no una porque el panel de
+ * un activo se prueba eligiendo entre proveedores, y con una sola no hay nada
+ * que elegir.
+ */
+export const marketCredentials = [
+	{
+		provider: 'finnhub',
+		last4: '3f9a',
+		status: 'active',
+		lastVerifiedAt: NOW,
+		createdAt: NOW,
+		updatedAt: NOW
+	},
+	{
+		provider: 'alphavantage',
+		last4: '1c2d',
+		status: 'active',
+		lastVerifiedAt: NOW,
+		createdAt: NOW,
+		updatedAt: NOW
+	}
+];

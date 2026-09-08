@@ -123,6 +123,36 @@ func (h *handler) SyncMarketData(c fiber.Ctx) error {
 	return httpx.OK(c, "Market data synced", "", SyncResultDTO{Prices: prices, Rates: rates})
 }
 
+// RefreshAssetPrice re-quotes one asset with one key of the caller's own.
+//
+// SyncMarketData above refreshes every holding and lets the chain pick who
+// answers; this is the same act narrowed to the asset somebody is looking at,
+// with the provider named. It carries the credential limiter for the same
+// reason sync does: each call spends the user's own quota.
+func (h *handler) RefreshAssetPrice(c fiber.Ctx) error {
+	userID, _, _, err := httpx.Identity(c)
+	if err != nil {
+		return httpx.BadRequest(c, "Invalid identity", err.Error())
+	}
+
+	assetID, err := httpx.ParamUUID(c, "assetId")
+	if err != nil {
+		return httpx.BadRequest(c, "Invalid asset ID", err.Error())
+	}
+
+	req, err := httpx.Bind[RefreshAssetPriceRequestDTO](c)
+	if err != nil {
+		return httpx.BadRequest(c, "Invalid request", err.Error())
+	}
+
+	price, err := h.service.RefreshAssetPrice(c, userID, assetID, ProviderID(req.Provider))
+	if err != nil {
+		return httpx.FromDomain(c, err, "Could not refresh the price", refreshFailureDetail(err))
+	}
+
+	return httpx.OK(c, "Price updated", "", price)
+}
+
 // credentialFailureDetail keeps provider text out of the response body unless
 // it is one of our own domain errors.
 //

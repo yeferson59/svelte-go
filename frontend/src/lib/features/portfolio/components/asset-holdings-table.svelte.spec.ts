@@ -17,6 +17,8 @@ const row: AssetHoldingRow = {
 	percent: 37.5,
 	portfolios: 2,
 	priceSource: 'own',
+	priceProvider: 'finnhub',
+	priceFetchedAt: '2026-09-05T10:00:00Z',
 	fxConverted: true
 };
 
@@ -24,7 +26,8 @@ const props = {
 	maxValue: 9002.7,
 	displayCurrency: 'USD',
 	formatValue: (v: number) => `$${v.toFixed(2)}`,
-	onGoToPortfolios: () => {}
+	onGoToPortfolios: () => {},
+	onOpen: () => {}
 };
 
 describe('asset-holdings-table.svelte', () => {
@@ -79,6 +82,17 @@ describe('asset-holdings-table.svelte', () => {
 		render(AssetHoldingsTable, { ...props, rows: [{ ...row, fxConverted: false }] });
 
 		await expect.element(page.getByText('sin convertir a USD')).toBeInTheDocument();
+	});
+
+	// El activo es lo que se pulsa para ver de dónde sale su precio, y es un
+	// botón de verdad: la fila entera no puede serlo porque dentro hay texto que
+	// se selecciona, y un `onclick` sobre el `<tr>` no llega por teclado.
+	it('opens the asset when its name is pressed', async () => {
+		const onOpen = vi.fn();
+		render(AssetHoldingsTable, { ...props, rows: [row], onOpen });
+
+		await page.getByRole('button', { name: /precio de AAPL/ }).click();
+		expect(onOpen).toHaveBeenCalledWith(row);
 	});
 
 	// Aquí no hay un portafolio al que agregar —la vista los atraviesa todos—,

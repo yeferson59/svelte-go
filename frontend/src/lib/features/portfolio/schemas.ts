@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod';
+import { marketProviderSchema } from '$lib/api/schemas';
 
 /** Alta de un portfolio (`routes/dashboard/portfolios/add`). */
 export const portfolioCreateSchema = z.object({
@@ -111,3 +112,16 @@ export const transactionDeleteSchema = z.object({ txnId: z.uuid() });
 
 /** Borrado de una posición entera, con todo su historial. */
 export const entryDeleteSchema = z.object({ entryId: z.uuid() });
+
+/**
+ * Actualización manual del precio de un activo contra un proveedor concreto
+ * (`routes/dashboard/assets`).
+ *
+ * El proveedor sale del enum del contrato de la API y no de una cadena libre:
+ * el backend lo rechazaría igual, pero un valor que no es ninguno de los dos no
+ * merece un viaje de ida y vuelta para enterarse.
+ */
+export const assetPriceRefreshSchema = z.object({
+	assetId: z.uuid('No se reconoce el activo.'),
+	provider: marketProviderSchema
+});

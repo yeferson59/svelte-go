@@ -56,6 +56,13 @@ func (r *PostgresRepository) GetAssetHoldingsByUserID(ctx context.Context, userI
 				WHEN MAX(a.current_price) IS NOT NULL THEN 'manual'
 				ELSE 'cost'
 			END AS price_source,
+			-- Who produced that price and when. Aggregated for the same reason
+			-- the price above is: uap is one row per (user, asset), so MAX is
+			-- how the group is told there is only one value. Both stay NULL
+			-- unless the price came from the user's own key — a manual catalog
+			-- price and a cost basis have no provider to name.
+			CASE WHEN MAX(uap.price) IS NOT NULL THEN MAX(uap.source) END AS price_provider,
+			CASE WHEN MAX(uap.price) IS NOT NULL THEN MAX(uap.fetched_at) END AS price_fetched_at,
 			COUNT(*) FILTER (WHERE fx.rate IS NULL)::bigint AS positions_unconverted
 		FROM portfolio_entries pe
 		JOIN portfolios p ON p.id = pe.portfolio_id
@@ -90,6 +97,9 @@ func (r *PostgresRepository) GetAssetHoldingsByUserID(ctx context.Context, userI
 	holdings := make([]AssetHolding, 0)
 	for rows.Next() {
 		var holding AssetHolding
+		// NULL for every row whose price did not come from the user's own key,
+		// which is most of them on an account with no provider configured.
+		var priceProvider *string
 
 		if err := rows.Scan(
 			&holding.AssetID,
@@ -104,9 +114,15 @@ func (r *PostgresRepository) GetAssetHoldingsByUserID(ctx context.Context, userI
 			&holding.DisplayCurrency,
 			&holding.Portfolios,
 			&holding.PriceSource,
+			&priceProvider,
+			&holding.PriceFetchedAt,
 			&holding.PositionsUnconverted,
 		); err != nil {
 			return nil, err
+		}
+
+		if priceProvider != nil {
+			holding.PriceProvider = *priceProvider
 		}
 
 		holdings = append(holdings, holding)

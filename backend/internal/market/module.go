@@ -153,4 +153,7 @@ func (m *Module) Routes(router fiber.Router) {
 	marketData.Delete("/credentials/:provider", m.credLimiter, m.handler.DeleteCredential)
 
 	marketData.Post("/sync", m.credLimiter, m.handler.SyncMarketData)
+	// One asset, one named key. Same gate as the sync above, and for the same
+	// reason: both spend the caller's own provider quota.
+	marketData.Post("/assets/:assetId/refresh", m.credLimiter, m.handler.RefreshAssetPrice)
 }

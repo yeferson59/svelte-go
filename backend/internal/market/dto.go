@@ -33,6 +33,16 @@ type SaveCredentialRequestDTO struct {
 	APIKey string `json:"apiKey" validate:"required,min=8,max=256"`
 }
 
+// RefreshAssetPriceRequestDTO names the key one asset must be re-quoted with.
+//
+// The provider is required and has no default on purpose: the whole point of
+// the request is that the caller chose one, and a body that left it out would
+// quietly become a fallback run whose result is attributed to whichever
+// provider happened to answer.
+type RefreshAssetPriceRequestDTO struct {
+	Provider string `json:"provider" validate:"required"`
+}
+
 // SyncResultDTO is what POST /market/sync returns: the prices and the rates the
 // caller's own keys fetched.
 //

@@ -413,6 +413,12 @@ Lo que solo trae esta:
   no en `displayCurrency`: es lo que cotiza, no lo que se convirtió. Llega
   **vacío** cuando `priceSource` es `cost` — cada entry pagó el suyo y ningún
   número representa al activo. Vacío no es cero.
+- `priceProvider` y `priceFetchedAt`, quién trajo ese precio y cuándo. Solo
+  vienen con `priceSource: "own"`: un precio manual del catálogo y un coste no
+  salen de ningún proveedor. `priceSource` dice que el precio es del propio
+  usuario, que basta para saber que no es un coste y no basta para decidir si
+  hay que volver a pedirlo — «Finnhub, hace tres días» sí, y es lo que necesita
+  `POST /market/assets/:assetId/refresh` (§2.10) para saber a quién repreguntar.
 
 Las entries en cantidad 0 quedan fuera: una posición vendida entera no es algo
 que el usuario tenga.
@@ -779,6 +785,7 @@ usuario.
 | POST | `/market/credentials/:provider/verify` | Recomprueba una clave guardada |
 | DELETE | `/market/credentials/:provider` | Borra una clave |
 | POST | `/market/sync` | Sincroniza las tenencias propias con las claves propias |
+| POST | `/market/assets/:assetId/refresh` | Repide el precio de **un** activo a **un** proveedor |
 
 `:provider` es `finnhub` o `alphavantage`.
 
@@ -835,6 +842,41 @@ trabajo se corta a los 60 s y devuelve lo que dio tiempo a traer: el sync
 espacia sus llamadas para no agotar la cuota personal (13 s entre peticiones a
 Alpha Vantage), así que una cartera grande no cabe en una petición HTTP. El
 resto lo recoge el job diario.
+
+`POST /market/assets/:assetId/refresh` es lo mismo reducido a un activo y con el
+proveedor **nombrado** en el cuerpo:
+
+```json
+{ "provider": "finnhub" }
+```
+
+Devuelve el precio, con la misma forma que un elemento de `prices`:
+
+```json
+{ "assetId": "…", "ticker": "AAPL", "price": "190.55", "source": "finnhub", "fetchedAt": "…" }
+```
+
+La cadena se construye con **una sola** clave, no con todas las del usuario: el
+llamante eligió un proveedor, y una cadena de respaldo que se cayera al
+siguiente guardaría el precio de Alpha Vantage bajo el nombre de Finnhub. Por
+eso un proveedor para el que no hay clave guardada da 404 en vez de contestar
+con otro.
+
+Los fallos se distinguen entre sí porque cada uno se arregla de forma distinta,
+y el `details` viene redactado para enseñárselo al usuario:
+
+| Estado | Caso |
+|---|---|
+| 400 | El tipo de activo no lo cotiza ningún proveedor (efectivo, inmobiliario…) |
+| 400 | Ese proveedor no tiene datos de ese activo — otra clave puede tenerlos |
+| 400 | El proveedor rechazó la clave (se marca `invalid`, como en el sync) |
+| 404 | No hay clave guardada para ese proveedor, o el activo no está en el catálogo |
+| 429 | La cuota de esa clave está agotada (se marca `rate_limited`) |
+
+Un activo que ningún proveedor cotiza y un activo que *ese* proveedor no cubre
+son dos respuestas distintas a propósito: la primera no la arregla ninguna
+clave y la segunda sí. El job diario no necesita esta distinción —se salta
+ambos en silencio y pasa al siguiente— pero aquí el fallo *es* la respuesta.
 
 ### 2.11 MCP — Model Context Protocol (token MCP o JWT)
 

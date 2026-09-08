@@ -19,6 +19,7 @@
 		displayCurrency,
 		formatValue,
 		onGoToPortfolios,
+		onOpen,
 		active = $bindable(null)
 	}: {
 		/** Todos los activos, ya ordenados de mayor a menor. */
@@ -28,6 +29,8 @@
 		displayCurrency: string;
 		formatValue: (value: number) => string;
 		onGoToPortfolios: () => void;
+		/** Abre el panel de precio de un activo; lo dispara su fila. */
+		onOpen: (row: AssetHoldingRow) => void;
 		/** Ticker señalado, compartido con la barra de concentración. */
 		active?: string | null;
 	} = $props();
@@ -101,6 +104,7 @@
 			{displayCurrency}
 			{formatValue}
 			{onGoToPortfolios}
+			{onOpen}
 			bind:active
 		/>
 

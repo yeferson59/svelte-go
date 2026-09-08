@@ -64,4 +64,46 @@ test.describe('mis activos', () => {
 		await page.getByRole('button', { name: 'Ver todos' }).click();
 		await expect(page.locator('tbody tr')).toHaveCount(10);
 	});
+
+	/*
+	 * Pulsar un activo abre lo que la lista no cabe diciendo: de qué clave salió
+	 * su precio, y con cuál volver a pedirlo. El botón «Sincronizar» de Ajustes
+	 * recorre todas las tenencias y elige el proveedor por su cuenta; aquí se
+	 * elige a mano y se pregunta por un solo activo.
+	 */
+	test('opens an asset to see where its price came from and re-ask a provider', async ({
+		page
+	}) => {
+		await login(page);
+		await page.goto('/dashboard/assets');
+
+		await page.getByRole('button', { name: /precio de BTC/ }).click();
+
+		const panel = page.getByRole('dialog');
+		await expect(panel).toBeVisible();
+		await expect(panel.getByText(/Lo trajo Finnhub hace/)).toBeVisible();
+
+		// Viene marcado el proveedor que trajo el precio que se está mirando:
+		// repreguntar a quien contestó es lo que se quiere casi siempre.
+		await expect(panel.getByRole('radio', { name: /Finnhub/ })).toBeChecked();
+
+		await panel.getByRole('button', { name: 'Actualizar precio' }).click();
+		await expect(panel.getByText(/Finnhub respondió/)).toBeVisible();
+	});
+
+	// Que un proveedor no cubra un activo no es que la clave falle, y son dos
+	// arreglos distintos: el backend lo dice con esas palabras y la UI lo pone
+	// tal cual, en el activo sobre el que se preguntó.
+	test('says when the chosen provider has no data for the asset', async ({ page }) => {
+		await login(page);
+		await page.goto('/dashboard/assets');
+
+		await page.getByRole('button', { name: /precio de BTC/ }).click();
+
+		const panel = page.getByRole('dialog');
+		await panel.getByRole('radio', { name: /Alpha Vantage/ }).check();
+		await panel.getByRole('button', { name: 'Actualizar precio' }).click();
+
+		await expect(panel.getByText(/no tiene datos de este activo/)).toBeVisible();
+	});
 });

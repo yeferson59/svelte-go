@@ -19,6 +19,7 @@ import type {
 	ExchangeRate,
 	ImportResult,
 	MarketCredential,
+	MarketPrice,
 	MarketProvider,
 	MarketSyncResult
 } from './types';
@@ -26,6 +27,7 @@ import {
 	assetSchema,
 	exchangeRateSchema,
 	marketCredentialSchema,
+	marketPriceSchema,
 	marketSyncResultSchema
 } from './schemas';
 import { z } from 'zod';
@@ -234,4 +236,34 @@ export function deleteMarketCredential(
  */
 export function syncMarketData(event: ApiEvent): Promise<ApiResult<MarketSyncResult>> {
 	return apiRequest(event, '/market/sync', { method: 'POST' }, marketSyncResultSchema);
+}
+
+/**
+ * `POST /market/assets/:id/refresh` — vuelve a pedir el precio de un activo a
+ * un proveedor concreto.
+ *
+ * `POST /market/sync` recorre todas las tenencias y deja que la cadena de
+ * respaldo decida quién contesta, que es lo que hace falta en un job diario.
+ * Esto es lo mismo reducido a un activo y con el proveedor nombrado: quien está
+ * mirando una posición quiere saber si el precio está viejo o si el proveedor
+ * sigue diciendo lo mismo, y para eso hay que volver a preguntarle *a ese*.
+ *
+ * Gasta una consulta de la cuota del usuario, así que el backend la limita con
+ * la misma puerta que las claves.
+ */
+export function refreshAssetPrice(
+	event: ApiEvent,
+	assetId: string,
+	provider: MarketProvider
+): Promise<ApiResult<MarketPrice>> {
+	return apiRequest(
+		event,
+		`/market/assets/${assetId}/refresh`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ provider })
+		},
+		marketPriceSchema
+	);
 }

@@ -29,6 +29,7 @@
 		displayCurrency,
 		formatValue,
 		onGoToPortfolios,
+		onOpen,
 		active = $bindable(null)
 	}: {
 		rows: AssetHoldingRow[];
@@ -46,6 +47,13 @@
 		 * vista los atraviesa todos—, así que lleva a elegir uno.
 		 */
 		onGoToPortfolios: () => void;
+		/**
+		 * Abre el activo: de dónde salió su precio y con qué clave volver a
+		 * pedirlo. Es la acción de la fila, y por eso cuelga del nombre del
+		 * activo y no de un botón en una columna aparte — la fila entera no puede
+		 * ser el disparador porque dentro hay texto que se selecciona.
+		 */
+		onOpen: (row: AssetHoldingRow) => void;
 		/** Ticker señalado, compartido con la barra de concentración de arriba. */
 		active?: string | null;
 	} = $props();
@@ -102,12 +110,19 @@
 					onpointerleave={() => point(null)}
 				>
 					<th scope="row" class="asset">
-						<span class="ticker">{row.ticker}</span>
-						<span class="name">
-							{row.name}{#if row.portfolios > 1}<span class="spread">
-									, en {row.portfolios} portafolios</span
-								>{/if}
-						</span>
+						<button
+							type="button"
+							class="open"
+							onclick={() => onOpen(row)}
+							aria-label="Ver de dónde sale el precio de {row.ticker} y actualizarlo"
+						>
+							<span class="ticker">{row.ticker}</span>
+							<span class="name">
+								{row.name}{#if row.portfolios > 1}<span class="spread">
+										, en {row.portfolios} portafolios</span
+									>{/if}
+							</span>
+						</button>
 					</th>
 
 					<td class="col-class type">{row.typeLabel}</td>
@@ -252,6 +267,37 @@
 	.mono {
 		font-family: var(--font-mono);
 		font-variant-numeric: tabular-nums;
+	}
+
+	/*
+	 * El activo es lo que se pulsa, así que es un botón de verdad y no una fila
+	 * con un `onclick`: así llega el foco por teclado, Enter lo abre y el lector
+	 * de pantalla lo anuncia como lo que es. Sin ninguna pinta de botón —el
+	 * subrayado al pasar por encima es toda la señal que hace falta en una lista
+	 * donde las quince filas hacen lo mismo.
+	 */
+	.open {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: none;
+		background: none;
+		font: inherit;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.open:hover .ticker,
+	.open:focus-visible .ticker {
+		text-decoration: underline;
+		text-underline-offset: 3px;
+	}
+
+	.open:focus-visible {
+		outline: 2px solid var(--amber);
+		outline-offset: 3px;
+		border-radius: 4px;
 	}
 
 	.ticker {

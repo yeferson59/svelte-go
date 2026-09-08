@@ -29,6 +29,10 @@ export { default as AssetDeletePosition } from './components/asset-delete-positi
 // interno de la lista, que es la que sabe del buscador y de las hojas.
 export { default as AssetConcentrationBand } from './components/asset-concentration-band.svelte';
 export { default as AssetHoldingsList } from './components/asset-holdings-list.svelte';
+// El panel de un activo: de dónde salió su precio y con qué clave volver a
+// pedirlo. Lo abre la lista y lo monta la página, que es quien tiene las claves
+// del usuario y el `form` de la acción.
+export { default as AssetPricePanel } from './components/asset-price-panel.svelte';
 
 export * from './portfolio';
 export * from './asset-holdings';

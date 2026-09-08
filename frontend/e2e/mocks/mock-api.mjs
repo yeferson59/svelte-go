@@ -25,6 +25,7 @@ import {
 	growthFor,
 	holdings,
 	importPreview,
+	marketCredentials,
 	PORTFOLIOS,
 	portfolioSummary,
 	risks,
@@ -44,7 +45,8 @@ export {
 	sources,
 	transactions,
 	allocation,
-	assetHoldings
+	assetHoldings,
+	marketCredentials
 };
 
 const ACCOUNTS = {
@@ -428,6 +430,52 @@ const server = createServer(async (req, res) => {
 				)
 			: assets;
 		return send(res, 200, envelope(filtered));
+	}
+	// ---- Datos de mercado (BYO-key) ----
+	if (route === 'GET /market/credentials') {
+		return send(res, 200, envelope(marketCredentials));
+	}
+	// Repide el precio de un activo al proveedor que nombra el cuerpo. El stub
+	// no guarda nada —como el resto de sus escrituras— así que una recarga
+	// vuelve a traer el precio del fixture: lo que se prueba aquí es que la UI
+	// nombra al proveedor elegido y enseña su respuesta, no la persistencia.
+	if (req.method === 'POST' && /^\/market\/assets\/[0-9a-f-]{36}\/refresh$/.test(path)) {
+		const assetId = path.split('/')[3];
+		const holding = assetHoldings.find((h) => h.assetId === assetId);
+		if (!holding) {
+			return send(res, 404, errorEnvelope('asset not found'));
+		}
+
+		const body = JSON.parse((await readBody(req)).toString() || '{}');
+		const provider = body.provider;
+
+		// Alpha Vantage no cubre el fixture de cripto: es el camino de error que
+		// distingue «este proveedor no lo tiene» de «la clave no sirve», y la UI
+		// tiene que enseñarlo tal cual viene.
+		if (provider === 'alphavantage' && holding.assetType === 'crypto') {
+			return send(res, 400, {
+				success: false,
+				message: 'Could not refresh the price',
+				details: 'Este proveedor no tiene datos de este activo. Prueba con otra de tus claves.',
+				action: 'Could not refresh the price',
+				timestamp: NOW
+			});
+		}
+
+		return send(
+			res,
+			200,
+			envelope(
+				{
+					assetId,
+					ticker: holding.ticker,
+					price: holding.marketPrice,
+					source: provider,
+					fetchedAt: NOW
+				},
+				'Price updated'
+			)
+		);
 	}
 	if (route === 'GET /exchange-rates') {
 		return send(res, 200, envelope(exchangeRates));

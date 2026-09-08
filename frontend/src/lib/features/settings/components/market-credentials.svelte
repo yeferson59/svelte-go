@@ -14,6 +14,7 @@
 	import Input from '$lib/ui/input.svelte';
 	import Button from '$lib/ui/button.svelte';
 	import SettingsSection from './settings-section.svelte';
+	import { formatMarketProvider } from '$lib/shared/format/market-provider';
 	import type { MarketCredential, MarketProvider } from '$lib/api/types';
 
 	interface Props {
@@ -24,21 +25,25 @@
 
 	let { credentials, form }: Props = $props();
 
+	/*
+	 * Lo que esta pantalla sabe de cada proveedor y ninguna otra necesita: dónde
+	 * se saca la clave y qué cuota trae. El nombre no está aquí — sale de
+	 * `formatMarketProvider`, que es la misma tabla que usa el panel de un
+	 * activo: dos copias escritas a mano es como se acaba llamando de dos formas
+	 * distintas al mismo proveedor.
+	 */
 	const PROVIDERS: {
 		id: MarketProvider;
-		name: string;
 		signupUrl: string;
 		hint: string;
 	}[] = [
 		{
 			id: 'finnhub',
-			name: 'Finnhub',
 			signupUrl: 'https://finnhub.io/register',
 			hint: 'Recomendado: su plan gratuito permite 60 consultas por minuto.'
 		},
 		{
 			id: 'alphavantage',
-			name: 'Alpha Vantage',
 			signupUrl: 'https://www.alphavantage.co/support/#api-key',
 			hint: 'Su plan gratuito permite 25 consultas al día, así que se usa como respaldo.'
 		}
@@ -118,7 +123,7 @@
 
 			<div class="provider">
 				<div class="provider-head">
-					<h4 class="provider-name">{provider.name}</h4>
+					<h4 class="provider-name">{formatMarketProvider(provider.id)}</h4>
 					<!-- eslint-disable svelte/no-navigation-without-resolve -- resolve() es para rutas internas; estas salen al sitio del proveedor -->
 					<a
 						class="provider-link"

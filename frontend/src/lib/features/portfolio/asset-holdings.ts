@@ -75,6 +75,16 @@ export interface AssetHoldingRow {
 	portfolios: number;
 	priceSource: string;
 	/**
+	 * De qué proveedor salió `marketPrice` y cuándo, o `null` cuando no salió de
+	 * ninguno (precio manual del catálogo, o posición valorada a coste).
+	 *
+	 * `priceSource` dice que el precio es del propio usuario, que basta para
+	 * saber que no es un coste y no basta para decidir nada: volver a preguntar
+	 * —y a quién— necesita el nombre y la hora.
+	 */
+	priceProvider: string | null;
+	priceFetchedAt: string | null;
+	/**
 	 * `false` si alguna posición del activo no pudo convertirse por falta de
 	 * tasa: su importe va en su moneda nativa y el total la mezcla.
 	 */
@@ -111,6 +121,10 @@ export function toAssetHoldingRows(holdings: AssetHolding[]): AssetHoldingRow[] 
 		percent: h.percent,
 		portfolios: h.portfolios,
 		priceSource: h.priceSource,
+		// Ausentes salvo cuando el precio lo trajo una clave del usuario; se
+		// normalizan a `null` para que la plantilla pregunte una sola cosa.
+		priceProvider: h.priceProvider || null,
+		priceFetchedAt: h.priceFetchedAt || null,
 		fxConverted: h.positionsUnconverted === 0
 	}));
 }

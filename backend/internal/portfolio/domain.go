@@ -441,6 +441,18 @@ type AssetHolding struct {
 	// count the consolidated row hides by construction.
 	Portfolios  int64       `json:"portfolios"`
 	PriceSource PriceSource `json:"priceSource"`
+	// PriceProvider names the market-data provider whose key produced
+	// MarketPrice, and PriceFetchedAt is when it did. Both are empty unless
+	// PriceSource is own: a manual catalog price and a cost basis come from no
+	// provider.
+	//
+	// PriceSource alone says the price is the user's own, which is enough to
+	// know it is not a cost basis and not enough to act on. Deciding whether to
+	// re-ask — and whom — needs the name and the timestamp: "Finnhub, three days
+	// ago" is a stale quote worth refreshing, and the same number fetched a
+	// minute ago is simply what the market says.
+	PriceProvider  string     `json:"priceProvider,omitempty"`
+	PriceFetchedAt *time.Time `json:"priceFetchedAt,omitempty"`
 	// PositionsUnconverted counts this asset's entries that had no rate to
 	// DisplayCurrency and are therefore added at face value; same meaning as in
 	// AllocationItem and the summary.
