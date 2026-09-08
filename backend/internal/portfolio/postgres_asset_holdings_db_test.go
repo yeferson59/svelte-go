@@ -104,6 +104,14 @@ func heldAcrossPortfolios(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
 	entry(portfolioA, priced, 10, 150)
 	entry(portfolioB, priced, 5, 180)
 
+	// Priced with the user's own key, which outranks the catalog's 300. It is
+	// also the only case that has a provider to name and an hour to report:
+	// a manual catalog price and a cost basis come from nobody.
+	owned := asset("OWNED", "USD", 300)
+	entry(portfolioA, owned, 2, 250)
+	exec(`INSERT INTO user_asset_prices (user_id, asset_id, price, currency, source, fetched_at)
+	      VALUES ($1, $2, 400, 'USD', 'finnhub', NOW())`, userID, owned)
+
 	inNOK := asset("INNOK", "NOK", 50)
 	entry(portfolioA, inNOK, 4, 40)
 
@@ -149,8 +157,8 @@ func TestAssetHoldingsTotalTheSameAssetAcrossPortfolios(t *testing.T) {
 	if _, listed := byName["SOLDOUT"]; listed {
 		t.Error("a fully sold position is listed as a holding")
 	}
-	if len(holdings) != 4 {
-		t.Fatalf("holdings = %d, want 4: %+v", len(holdings), holdings)
+	if len(holdings) != 5 {
+		t.Fatalf("holdings = %d, want 5: %+v", len(holdings), holdings)
 	}
 
 	// The whole point of the view: 10 units in one portfolio and 5 in another
@@ -166,6 +174,30 @@ func TestAssetHoldingsTotalTheSameAssetAcrossPortfolios(t *testing.T) {
 	worth(t, "PRICED", priced.MarketValue, 3000)
 	if priced.PriceSource != PriceSourceManual {
 		t.Errorf("PRICED price source = %q, want manual", priced.PriceSource)
+	}
+
+	// The user's own price wins over the catalog's, and it is the one case that
+	// says where it came from. Without the provider and the timestamp,
+	// priceSource 'own' tells a client the price is theirs and leaves it with no
+	// way to decide whether to re-ask, or whom.
+	owned := byName["OWNED"]
+	if owned.PriceSource != PriceSourceOwn {
+		t.Errorf("OWNED price source = %q, want own", owned.PriceSource)
+	}
+	// 2 × 400, the user's price, not the catalog's 300.
+	worth(t, "OWNED", owned.MarketValue, 800)
+	if owned.PriceProvider != "finnhub" {
+		t.Errorf("OWNED price provider = %q, want finnhub", owned.PriceProvider)
+	}
+	if owned.PriceFetchedAt == nil {
+		t.Error("OWNED has no price timestamp")
+	}
+
+	// The mirror image, and the reason both columns are NULL-guarded in the
+	// query rather than just selected: a price nobody fetched has nobody to
+	// attribute and no hour to report.
+	if priced.PriceProvider != "" || priced.PriceFetchedAt != nil {
+		t.Errorf("PRICED is a manual catalog price but claims %q at %v", priced.PriceProvider, priced.PriceFetchedAt)
 	}
 
 	// Priced in another currency, reported in dollars: the price stays in the
@@ -188,6 +220,9 @@ func TestAssetHoldingsTotalTheSameAssetAcrossPortfolios(t *testing.T) {
 	atCost := byName["ATCOST"]
 	if atCost.PriceSource != PriceSourceCost {
 		t.Errorf("ATCOST price source = %q, want cost", atCost.PriceSource)
+	}
+	if atCost.PriceProvider != "" || atCost.PriceFetchedAt != nil {
+		t.Errorf("ATCOST is carried at cost but claims %q at %v", atCost.PriceProvider, atCost.PriceFetchedAt)
 	}
 	if atCost.MarketPrice != "" {
 		t.Errorf("ATCOST market price = %q, want empty", atCost.MarketPrice)

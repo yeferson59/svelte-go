@@ -56,6 +56,32 @@ func TestSyncAssetsForUser(t *testing.T) {
 		})
 	}
 
+	// A key that just filled the whole portfolio is not rate limited, whatever
+	// yesterday's run wrote about it. Without this the daily sync could never
+	// clear its own verdict: only failures reached SetCredentialStatus.
+	t.Run("a successful run clears the verdict left by an earlier one", func(t *testing.T) {
+		provider := new(fakePriceProvider{
+			fetchQuote: func(context.Context, string) (marketdata.QuoteResult, error) {
+				return marketdata.QuoteResult{Price: "190.55", Source: Finnhub}, nil
+			},
+		})
+
+		f := newBYOFixture(t, repoFor(Asset{ID: assetID, Ticker: "AAPL", AssetType: Stock, Currency: money.USD}), provider)
+		f.creds.seed(t, f.ring, userID, Finnhub, "user-finnhub-key")
+
+		if err := f.creds.SetCredentialStatus(context.Background(), userID, Finnhub, CredentialRateLimited, "an earlier burst"); err != nil {
+			t.Fatalf("SetCredentialStatus: %v", err)
+		}
+
+		if _, errs := f.svc.SyncAssetsForUser(context.Background(), userID, []uuid.UUID{assetID}); len(errs) > 0 {
+			t.Fatalf("SyncAssetsForUser: %v", errs)
+		}
+
+		if got := f.creds.statusOf(userID, Finnhub); got != CredentialActive {
+			t.Errorf("credential status = %q, want it back to active", got)
+		}
+	})
+
 	t.Run("a stock price is fetched with the user's key and stored against them", func(t *testing.T) {
 		provider := new(fakePriceProvider{
 			fetchQuote: func(_ context.Context, symbol string) (marketdata.QuoteResult, error) {

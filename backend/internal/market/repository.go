@@ -60,6 +60,13 @@ type CredentialStore interface {
 	GetSealedCredential(ctx context.Context, userID uuid.UUID, provider ProviderID) (sealedCredential, error)
 	DeleteCredential(ctx context.Context, userID uuid.UUID, provider ProviderID) error
 	SetCredentialStatus(ctx context.Context, userID uuid.UUID, provider ProviderID, status CredentialStatus, lastErr string) error
+	// MarkCredentialWorking clears a verdict that a later call has disproved.
+	//
+	// SetCredentialStatus is only ever reached by a failure, so a key marked
+	// rate_limited on Tuesday stayed marked until somebody pressed «Verificar»,
+	// however many prices it fetched on Wednesday. That is the other half of a
+	// badge telling the truth: one path to write a verdict, one to retire it.
+	MarkCredentialWorking(ctx context.Context, userID uuid.UUID, provider ProviderID) error
 	UsersWithCredentials(ctx context.Context) ([]uuid.UUID, error)
 
 	UpsertUserAssetPrice(ctx context.Context, userID, assetID uuid.UUID, price money.Money, currency money.Currency, source ProviderID, fetchedAt time.Time) error

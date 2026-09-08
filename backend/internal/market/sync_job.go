@@ -14,8 +14,13 @@ import (
 
 // syncConcurrency bounds how many users are synced at once. Quotas are personal
 // now, so users do not contend for one budget and can genuinely run in
-// parallel; the cap is about our own outbound connections and the providers'
-// per-IP limits, not about the keys.
+// parallel; the cap is about our own outbound connections, not about the keys.
+//
+// It is no longer what protects us from a provider's per-IP burst limit, and it
+// never could: four concurrent users are four calls leaving at once from one
+// address whatever this number is, unless it is one. That limit belongs to the
+// provider and is now enforced where it is known — the Alpha Vantage client
+// paces every call this process makes, across all users (see its burstInterval).
 const syncConcurrency = 4
 
 // Holdings reports which assets a user actually owns, and which currency pairs

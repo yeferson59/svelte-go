@@ -56,6 +56,11 @@ func (s *service) RefreshAssetPrice(ctx context.Context, userID, assetID uuid.UU
 		return UserAssetPrice{}, classifyRefresh(err)
 	}
 
+	// The key just worked, so any badge it was wearing is out of date. This is
+	// the button a user presses after fixing something, which makes it the most
+	// likely place for a stale verdict to be disproved.
+	s.clearStaleVerdicts(ctx, userID, map[ProviderID]bool{price.Source: true})
+
 	return price, nil
 }
 

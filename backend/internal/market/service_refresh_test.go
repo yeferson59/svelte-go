@@ -70,6 +70,28 @@ func TestRefreshAssetPrice(t *testing.T) {
 		}
 	})
 
+	// The other half of a badge that tells the truth. Only a failure ever
+	// reached SetCredentialStatus, so a key flagged on Tuesday stayed flagged
+	// however many prices it fetched on Wednesday — the user had to notice and
+	// press «Verificar» to clear a label that had stopped being true. Pressing
+	// «Actualizar precio» is the most likely moment for that to be disproved.
+	t.Run("a call that works retires a verdict a later call disproved", func(t *testing.T) {
+		f := newBYOFixture(t, repoFor(stock), quoting("190.55", Finnhub))
+		f.creds.seed(t, f.ring, userID, Finnhub, "user-finnhub-key")
+
+		if err := f.creds.SetCredentialStatus(context.Background(), userID, Finnhub, CredentialRateLimited, "yesterday's burst"); err != nil {
+			t.Fatalf("SetCredentialStatus: %v", err)
+		}
+
+		if _, err := f.svc.RefreshAssetPrice(context.Background(), userID, assetID, Finnhub); err != nil {
+			t.Fatalf("RefreshAssetPrice: %v", err)
+		}
+
+		if got := f.creds.statusOf(userID, Finnhub); got != CredentialActive {
+			t.Errorf("credential status = %q, want it back to active", got)
+		}
+	})
+
 	// The property that makes this endpoint different from the sync: the chain
 	// is built from one key, so it cannot fall through to a provider the caller
 	// did not choose and report its price under the chosen one's name.

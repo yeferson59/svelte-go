@@ -834,6 +834,18 @@ purposes only»—, así que lo que las distingue es el texto, no el campo. Un
 mensaje que no reconocemos no se clasifica: sin sentinela, ningún veredicto se
 escribe sobre la clave.
 
+Para que la ráfaga no llegue a ocurrir, el cliente de Alpha Vantage espacia
+**todas** las llamadas del proceso a una cada 1,2 s, no las de cada usuario por
+separado: el límite va por IP, así que la separación tiene que ser global o no
+sirve de nada. Es una espera, no un reintento — reintentar gastaría una segunda
+petición de las 25 diarias para enterarse de lo que ya sabíamos.
+
+El estado de una clave también se **retira** solo. `status` lo escribía
+únicamente un fallo, así que una clave marcada el martes seguía marcada el
+miércoles por muchos precios que trajera. Ahora una llamada que funciona
+devuelve su credencial a `active` y borra `lastError`, en el sync, en el
+refresco de un activo y al verificarla a mano.
+
 Una clave cuya cuota está agotada **sí se guarda**, con `status: "rate_limited"`:
 negarse a guardarla dejaría sin configurar una clave perfectamente válida solo
 por la hora a la que el usuario la introdujo.

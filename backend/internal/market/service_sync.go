@@ -57,6 +57,10 @@ func (s *service) SyncAssetsForUser(ctx context.Context, userID uuid.UUID, asset
 
 	results := make([]UserAssetPrice, 0, len(assetIDs))
 	var errs []error
+	// Who actually answered. Cleared once at the end rather than per price: a
+	// hundred positions would otherwise mean a hundred UPDATEs saying the same
+	// thing.
+	answered := make(map[ProviderID]bool, len(SupportedProviders))
 
 	for i, assetID := range assetIDs {
 		// Space the calls out so a personal free-tier quota is not tripped by
@@ -83,9 +87,28 @@ func (s *service) SyncAssetsForUser(ctx context.Context, userID uuid.UUID, asset
 		}
 
 		results = append(results, price)
+		answered[price.Source] = true
 	}
 
+	s.clearStaleVerdicts(ctx, userID, answered)
+
 	return results, errs
+}
+
+// clearStaleVerdicts retires the badge of every key that just did its job.
+//
+// recordProviderVerdict is the other half and only a failure reaches it, so
+// without this a key marked rate_limited stays marked however many prices it
+// fetches afterwards — the user has to notice and press «Verificar» to clear a
+// label that stopped being true days ago.
+func (s *service) clearStaleVerdicts(ctx context.Context, userID uuid.UUID, answered map[ProviderID]bool) {
+	for provider := range answered {
+		if err := s.repo.MarkCredentialWorking(ctx, userID, provider); err != nil {
+			// Not worth failing a run that fetched prices: the badge is stale,
+			// the data is not.
+			s.log.Error(ctx, "cannot clear credential status", logger.Err(err), logger.Str("provider", string(provider)))
+		}
+	}
 }
 
 // errAssetTypeUnsupported marks an asset the providers cannot quote (cash, real
@@ -178,6 +201,7 @@ func (s *service) SyncRatesForUser(ctx context.Context, userID uuid.UUID, pairs 
 
 	results := make([]UserExchangeRate, 0, len(pairs))
 	var errs []error
+	answered := make(map[ProviderID]bool, len(SupportedProviders))
 
 	for i, pair := range pairs {
 		if i > 0 {
@@ -217,7 +241,10 @@ func (s *service) SyncRatesForUser(ctx context.Context, userID uuid.UUID, pairs 
 			Source:       result.Source,
 			FetchedAt:    result.FetchedAt,
 		})
+		answered[result.Source] = true
 	}
+
+	s.clearStaleVerdicts(ctx, userID, answered)
 
 	return results, errs
 }

@@ -138,6 +138,29 @@ func (r *PostgresRepository) DeleteCredential(ctx context.Context, userID uuid.U
 	return nil
 }
 
+// MarkCredentialWorking retires a stale verdict after a call that actually
+// succeeded with this key.
+//
+// The WHERE clause carries the whole design. It makes the common case — a key
+// that was already active — a no-op the database resolves on the index, so this
+// can run after every successful sync without becoming a write per price. And
+// unlike SetCredentialStatus a missing row is not an error: the caller learns
+// the provider from the answer it just got, so being asked about a credential
+// that is no longer there means the user deleted it mid-run, not that anything
+// is wrong.
+func (r *PostgresRepository) MarkCredentialWorking(ctx context.Context, userID uuid.UUID, provider ProviderID) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE market_credentials
+		SET status = 'active',
+		    last_error = NULL,
+		    last_verified_at = NOW(),
+		    updated_at = NOW()
+		WHERE user_id = $1 AND provider = $2 AND status <> 'active'
+	`, userID, string(provider))
+
+	return err
+}
+
 // SetCredentialStatus records the verdict of a provider call. lastErr is
 // expected to be already scrubbed of the key by the provider client.
 //

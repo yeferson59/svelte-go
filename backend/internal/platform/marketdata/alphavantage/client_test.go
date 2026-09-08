@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"golang.org/x/time/rate"
 
 	"github.com/yeferson59/gofinance/v2/money"
 
@@ -31,7 +34,13 @@ func jsonResponse(body string) *http.Response {
 func newTestClient(fn roundTripFunc) *Client {
 	// A dedicated client per test: New's default is process-wide, and mutating
 	// its transport here would leak the stub into every other caller.
-	return New("test-key", new(http.Client{Transport: fn}))
+	c := New("test-key", new(http.Client{Transport: fn}))
+	// The real pacer holds calls 1.2s apart, which is right in production and
+	// absurd here: this file alone would take half a minute. The pacing itself
+	// is covered by TestPacerSerialisesCallsAcrossClients.
+	c.pace = rate.NewLimiter(rate.Inf, 1)
+
+	return c
 }
 
 func TestFetchQuote(t *testing.T) {
@@ -211,4 +220,65 @@ func TestClassifyReadsWhatTheProviderSaid(t *testing.T) {
 			}
 		}
 	})
+}
+
+// The gate has to be shared, not per client: a client here is built fresh for
+// each user on each sync run, so a limiter held per client would pace nothing
+// and four concurrent users would still fire four calls at once from one IP —
+// which is exactly what made Alpha Vantage answer "please consider spreading
+// out your free API requests more sparingly" and, before the classifier was
+// fixed, stamped four working keys as out of quota.
+func TestPacerSerialisesCallsAcrossClients(t *testing.T) {
+	const interval = 40 * time.Millisecond
+
+	original := pacer
+	t.Cleanup(func() { pacer = original })
+	pacer = rate.NewLimiter(rate.Every(interval), 1)
+
+	quote := func(*http.Request) (*http.Response, error) {
+		return jsonResponse(`{"Global Quote":{"05. price":"1.00"}}`), nil
+	}
+
+	// Two clients with different keys, as two users' syncs would build them.
+	first := New("key-of-one-user", new(http.Client{Transport: roundTripFunc(quote)}))
+	second := New("key-of-another", new(http.Client{Transport: roundTripFunc(quote)}))
+
+	start := time.Now()
+	for _, c := range []*Client{first, second, first} {
+		if _, err := c.FetchQuote(context.Background(), "AAPL"); err != nil {
+			t.Fatalf("FetchQuote: %v", err)
+		}
+	}
+
+	// Three calls, one free and two paced.
+	if elapsed := time.Since(start); elapsed < 2*interval {
+		t.Errorf("three calls took %s, want at least %s: they were not paced", elapsed, 2*interval)
+	}
+}
+
+// A caller that gives up while queued must not be left waiting for its turn:
+// the on-demand sync cuts itself off at 60s and the request that started it is
+// gone by then.
+func TestPacerRespectsCancellation(t *testing.T) {
+	original := pacer
+	t.Cleanup(func() { pacer = original })
+	pacer = rate.NewLimiter(rate.Every(time.Hour), 1)
+
+	c := New("test-key", new(http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResponse(`{"Global Quote":{"05. price":"1.00"}}`), nil
+	})}))
+
+	// The first call spends the only token, so the second has an hour to wait.
+	if _, err := c.FetchQuote(context.Background(), "AAPL"); err != nil {
+		t.Fatalf("first FetchQuote: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	_, err := c.FetchQuote(ctx, "AAPL")
+	if err == nil {
+		t.Fatal("expected the queued call to give up with the context")
+	}
+	assertScrubbed(t, err)
 }

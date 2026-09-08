@@ -17,6 +17,7 @@ import (
 	"time"
 
 	json "github.com/bytedance/sonic"
+	"golang.org/x/time/rate"
 
 	"github.com/yeferson59/gofinance/v2/money"
 
@@ -25,11 +26,36 @@ import (
 
 const baseURL = "https://www.alphavantage.co/query"
 
+// burstInterval is the pace this package keeps for the whole process.
+//
+// Alpha Vantage throttles bursts on the free tier at roughly one request per
+// second, and it counts them per **IP** as much as per key: a call with a
+// different key from the same host trips it too. That is why the pacing the
+// sync already does per user cannot prevent it — nothing one user's chain does
+// is enough when four of them run at once from one address — and why the reply
+// ("please consider spreading out your free API requests more sparingly") is
+// about us and never about the user's credential.
+//
+// 1.2s rather than 1s: the limit is not documented as an exact figure, and the
+// round trip is not the only thing that can sit between two calls.
+const burstInterval = 1200 * time.Millisecond
+
+// pacer gates every call this package makes, process-wide.
+//
+// Package-level on purpose, which is unusual enough to say why: the limit is a
+// property of the provider and of our outbound IP, not of a client, and a
+// client here is built fresh for each user on each sync run. A limiter held per
+// client would pace exactly nothing.
+var pacer = rate.NewLimiter(rate.Every(burstInterval), 1)
+
 var _ marketdata.Provider = (*Client)(nil)
 
 type Client struct {
 	apiKey     string
 	httpClient *http.Client
+	// pace is the shared gate above, injectable so tests do not have to spend a
+	// real second between calls.
+	pace *rate.Limiter
 }
 
 // New builds a client for one user's key. Callers should pass the shared
@@ -40,13 +66,26 @@ func New(apiKey string, httpClient *http.Client) *Client {
 		httpClient = marketdata.DefaultHTTPClient
 	}
 
-	return new(Client{apiKey: apiKey, httpClient: httpClient})
+	return new(Client{apiKey: apiKey, httpClient: httpClient, pace: pacer})
 }
 
 // get issues a query and decodes it into out. The response envelope is
 // inspected first: Alpha Vantage reports a bad key and an exhausted quota with
 // HTTP 200 and a JSON field, not a status code.
 func (c *Client) get(ctx context.Context, params url.Values, what string, out any) error {
+	// Before anything else, including building the request: the whole point is
+	// that no two calls leave this process closer together than burstInterval,
+	// whichever user or goroutine they belong to.
+	//
+	// Waiting here rather than retrying after a throttle is deliberate. A retry
+	// spends a second request to learn what we already knew, and on a provider
+	// whose free tier allows 25 a day that is half the budget gone to politeness.
+	if c.pace != nil {
+		if err := c.pace.Wait(ctx); err != nil {
+			return marketdata.Errorf(marketdata.AlphaVantage, c.apiKey, nil, "alphavantage: waiting to pace %s: %v", what, err)
+		}
+	}
+
 	params.Set("apikey", c.apiKey)
 
 	endpoint := baseURL + "?" + params.Encode()

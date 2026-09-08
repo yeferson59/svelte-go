@@ -359,6 +359,26 @@ func (c *credentialStore) SetCredentialStatus(_ context.Context, userID uuid.UUI
 	return nil
 }
 
+// MarkCredentialWorking mirrors the real UPDATE … WHERE status <> 'active':
+// a no-op on a healthy key, and never an error when the row is gone.
+func (c *credentialStore) MarkCredentialWorking(_ context.Context, userID uuid.UUID, provider ProviderID) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	key := credKey(userID, provider)
+
+	cred, ok := c.meta[key]
+	if !ok || cred.Status == CredentialActive {
+		return nil
+	}
+
+	cred.Status, cred.LastError = CredentialActive, ""
+	cred.LastVerifiedAt = new(time.Now().UTC())
+	c.meta[key] = cred
+
+	return nil
+}
+
 func (c *credentialStore) statusOf(userID uuid.UUID, provider ProviderID) CredentialStatus {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -493,6 +513,10 @@ func (f *fakeRepository) DeleteCredential(ctx context.Context, userID uuid.UUID,
 
 func (f *fakeRepository) SetCredentialStatus(ctx context.Context, userID uuid.UUID, provider ProviderID, status CredentialStatus, lastErr string) error {
 	return f.creds.SetCredentialStatus(ctx, userID, provider, status, lastErr)
+}
+
+func (f *fakeRepository) MarkCredentialWorking(ctx context.Context, userID uuid.UUID, provider ProviderID) error {
+	return f.creds.MarkCredentialWorking(ctx, userID, provider)
 }
 
 func (f *fakeRepository) UsersWithCredentials(ctx context.Context) ([]uuid.UUID, error) {

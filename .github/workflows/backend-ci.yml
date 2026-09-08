@@ -21,6 +21,26 @@ jobs:
       run:
         working-directory: backend
 
+    # Postgres is not decoration here. The consolidated holdings list, the
+    # growth series and the OAuth store live entirely in SQL, so their tests
+    # skip themselves without TEST_DATABASE_URL — which meant they had never
+    # run anywhere, CI included, and a query could ship with its columns and
+    # its Scan out of step.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v7
 
@@ -38,9 +58,22 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # The schema the SQL tests query, built by the project's own migrator so
+      # CI exercises the same path a deployment does.
+      - name: Migrate the test database
+        env:
+          DATABASE_URL: "postgresql://postgres:password@localhost:5432/postgres?sslmode=disable"
+          JWT_SECRET: "zXI+y4c59+ccBRqkx1eU2zNN6lIYa2566IZFZJxyhkFIxxGRc12S20rUyJ4qBuW7"
+          MARKET_KEK_KEYS: "1:X0TJ9pJPSKURUNeeX3o1pMXZMHSQ7eoPBh600nbqTWw="
+        run: go run ./cmd/migrator -cmd=up
+
       - name: Test
         env:
           DATABASE_URL: "postgresql://postgres:password@localhost:5432/postgres?sslmode=disable"
+          # Separate from DATABASE_URL on purpose: it is the switch the SQL
+          # tests read, so a run without a database still passes by skipping
+          # them instead of failing.
+          TEST_DATABASE_URL: "postgresql://postgres:password@localhost:5432/postgres?sslmode=disable"
           JWT_SECRET: "zXI+y4c59+ccBRqkx1eU2zNN6lIYa2566IZFZJxyhkFIxxGRc12S20rUyJ4qBuW7"
           MARKET_KEK_KEYS: "1:X0TJ9pJPSKURUNeeX3o1pMXZMHSQ7eoPBh600nbqTWw="
         run: go test ./... -count=1 -coverprofile=coverage.out
