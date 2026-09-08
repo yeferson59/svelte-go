@@ -79,7 +79,15 @@ var (
 	// for good: one bad afternoon at the provider would silently retire a working
 	// key. Untagged, so it maps to 500 like every other upstream failure.
 	ErrProviderUnavailable = errors.New("the market data provider could not be reached")
-	ErrKeyEncryptionOff    = errors.New("market: credential encryption is not configured")
+	// ErrProviderThrottled means the provider asked us to slow down. It is a
+	// sibling of ErrProviderUnavailable, not of a spent quota: both mean "we got
+	// no answer worth acting on", so neither may be written down against the
+	// key.
+	//
+	// Tagged 429 rather than left untagged because, unlike an outage, the caller
+	// can do something about it — wait a moment and press again.
+	ErrProviderThrottled = httpx.AsTooManyRequests(errors.New("the market data provider is throttling requests right now"))
+	ErrKeyEncryptionOff  = errors.New("market: credential encryption is not configured")
 )
 
 // Single-asset refresh errors. The daily sync needs none of these: it runs over
@@ -114,8 +122,10 @@ func refreshFailureDetail(err error) string {
 		return "Ningún proveedor de precios cotiza este tipo de activo."
 	case errors.Is(err, ErrAssetNotCovered):
 		return "Este proveedor no tiene datos de este activo. Prueba con otra de tus claves."
+	case errors.Is(err, ErrProviderThrottled):
+		return "El proveedor está limitando el ritmo de peticiones. Espera unos segundos y vuelve a intentarlo."
 	case errors.Is(err, ErrProviderQuotaSpent):
-		return "La cuota de tu clave con este proveedor se agotó. Vuelve a intentarlo más tarde."
+		return "La cuota diaria de tu clave con este proveedor se agotó. Vuelve a intentarlo mañana."
 	case errors.Is(err, ErrInvalidAPIKey):
 		return "El proveedor rechazó tu clave. Revísala en Ajustes."
 	case errors.Is(err, ErrCredentialNotFound), errors.Is(err, ErrNoCredentials), errors.Is(err, ErrKeyEncryptionOff):
@@ -134,7 +144,7 @@ func refreshFailureDetail(err error) string {
 // transport failure — is replaced by a generic message before it reaches a
 // response body.
 func isDomainCredentialError(err error) bool {
-	for _, domain := range []error{ErrNoCredentials, ErrInvalidProvider, ErrInvalidAPIKey, ErrProviderUnavailable, ErrCredentialNotFound} {
+	for _, domain := range []error{ErrNoCredentials, ErrInvalidProvider, ErrInvalidAPIKey, ErrProviderUnavailable, ErrProviderThrottled, ErrCredentialNotFound} {
 		if errors.Is(err, domain) {
 			return true
 		}

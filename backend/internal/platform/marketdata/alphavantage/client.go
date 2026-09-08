@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	json "github.com/bytedance/sonic"
@@ -98,7 +99,16 @@ type clasifyEnvelope struct {
 }
 
 // classify turns Alpha Vantage's 200-with-a-message replies into the sentinels
-// the credential store uses to decide whether a key is dead or just throttled.
+// the credential store uses to decide whether a key is dead, spent or merely
+// being asked to slow down.
+//
+// The field a message arrives in does not say what happened, so the field is
+// not what decides. `Information` alone carries at least four unrelated
+// answers — a spent daily quota, a per-second burst, a premium-only endpoint
+// and "the demo key is for demo purposes only" — and the old code called all
+// of them an exhausted quota. That is how a key that works a second later
+// ended up wearing a standing "no quota" badge: the verdict was persisted
+// against the credential.
 func (c *Client) classify(raw json.NoCopyRawMessage, what string) error {
 	var envelope clasifyEnvelope
 
@@ -106,15 +116,68 @@ func (c *Client) classify(raw json.NoCopyRawMessage, what string) error {
 		return nil
 	}
 
+	for _, msg := range []string{envelope.ErrorMessage, envelope.Note, envelope.Information} {
+		if msg == "" {
+			continue
+		}
+
+		return marketdata.Errorf(marketdata.AlphaVantage, c.apiKey, sentinelFor(msg), "alphavantage: %s: %s", what, msg)
+	}
+
+	return nil
+}
+
+// sentinelFor reads what Alpha Vantage actually said.
+//
+// Order matters and is not alphabetical. The quota message names the key ("We
+// have detected your API key as … and our standard API rate limit is 25
+// requests per day") and the burst message names the premium plans, so a naive
+// "mentions the key ⇒ bad key" or "mentions premium ⇒ premium endpoint" test
+// would misread both. Each case is therefore matched on the phrase that only
+// that answer uses, most specific first.
+//
+// An unrecognised message yields nil: no sentinel means "this says nothing we
+// can act on", which is what keeps a message we have never seen from being
+// written down as a verdict on the user's key.
+func sentinelFor(msg string) error {
+	lower := strings.ToLower(msg)
+
 	switch {
-	case envelope.ErrorMessage != "":
-		return marketdata.Errorf(marketdata.AlphaVantage, c.apiKey, marketdata.ErrUnauthorized, "alphavantage: %s: %s", what, envelope.ErrorMessage)
-	case envelope.Note != "":
-		return marketdata.Errorf(marketdata.AlphaVantage, c.apiKey, marketdata.ErrRateLimited, "alphavantage: %s: %s", what, envelope.Note)
-	case envelope.Information != "":
-		// Used both for quota exhaustion on the free tier and for premium-only
-		// endpoints; treating it as throttling keeps the key marked usable.
-		return marketdata.Errorf(marketdata.AlphaVantage, c.apiKey, marketdata.ErrRateLimited, "alphavantage: %s: %s", what, envelope.Information)
+	// Transient and shared: the same key succeeds when the calls are spaced
+	// out, and a *different* key from the same host trips it too. Nothing about
+	// the credential follows from it.
+	case strings.Contains(lower, "spreading out") ||
+		strings.Contains(lower, "request per second") ||
+		strings.Contains(lower, "calls per minute"):
+		return marketdata.ErrThrottled
+
+	// The day's budget really is gone. This is the only one worth recording.
+	case strings.Contains(lower, "requests per day") || strings.Contains(lower, "daily rate limit"):
+		return marketdata.ErrRateLimited
+
+	// The key is valid and its quota untouched; this plan just does not serve
+	// this call. Same shape as a symbol the provider does not carry, so the
+	// fallback chain should move on to the next key.
+	case strings.Contains(lower, "premium endpoint"):
+		return marketdata.ErrUnsupported
+
+	// "The **demo** API key is for demo purposes only": a real statement about
+	// the key, and the one case in this field that is.
+	case strings.Contains(lower, "demo api key"):
+		return marketdata.ErrUnauthorized
+
+	// "the parameter apikey is invalid or missing". Reached only after the
+	// quota case above, which also mentions the key.
+	case strings.Contains(lower, "apikey") || strings.Contains(lower, "api key"):
+		return marketdata.ErrUnauthorized
+
+	// "Invalid API call. Please retry or visit the documentation…" is what a
+	// symbol Alpha Vantage does not know produces. It is about the request, not
+	// the credential — blaming the key here used to mark it invalid, and an
+	// invalid key is dropped from every later sync.
+	case strings.Contains(lower, "invalid api call"):
+		return marketdata.ErrUnsupported
+
 	default:
 		return nil
 	}

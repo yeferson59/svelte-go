@@ -818,6 +818,22 @@ que una clave rechazada: da 500, no 400, y no toca el estado almacenado. Marcar
 forma permanente, así que una caída del proveedor retiraría en silencio una
 clave que funciona.
 
+Un proveedor que **limita el ritmo** se trata igual —da 429 y deja el estado
+como estaba—, y por el mismo motivo. No es una cuota agotada: Alpha Vantage
+responde a una ráfaga con «please consider spreading out your free API requests
+more sparingly (1 request per second)» y la misma clave contesta unos segundos
+después. Su límite por ráfaga va **por IP** además de por clave, así que lo
+puede disparar nuestra propia concurrencia y no dice nada de la credencial del
+usuario. Guardarlo como `rate_limited` es lo que dejaba a una clave que funciona
+con un cartel permanente de «sin cuota».
+
+Alpha Vantage contesta todo esto con HTTP 200 y un campo JSON, y reutiliza
+`Information` para al menos cuatro respuestas sin relación entre sí —cuota
+diaria agotada, ráfaga, endpoint premium y «the demo API key is for demo
+purposes only»—, así que lo que las distingue es el texto, no el campo. Un
+mensaje que no reconocemos no se clasifica: sin sentinela, ningún veredicto se
+escribe sobre la clave.
+
 Una clave cuya cuota está agotada **sí se guarda**, con `status: "rate_limited"`:
 negarse a guardarla dejaría sin configurar una clave perfectamente válida solo
 por la hora a la que el usuario la introdujo.
@@ -871,7 +887,8 @@ y el `details` viene redactado para enseñárselo al usuario:
 | 400 | Ese proveedor no tiene datos de ese activo — otra clave puede tenerlos |
 | 400 | El proveedor rechazó la clave (se marca `invalid`, como en el sync) |
 | 404 | No hay clave guardada para ese proveedor, o el activo no está en el catálogo |
-| 429 | La cuota de esa clave está agotada (se marca `rate_limited`) |
+| 429 | La cuota **diaria** de esa clave está agotada (se marca `rate_limited`) |
+| 429 | El proveedor está limitando el **ritmo** de peticiones (no se marca nada) |
 
 Un activo que ningún proveedor cotiza y un activo que *ese* proveedor no cubre
 son dos respuestas distintas a propósito: la primera no la arregla ninguna

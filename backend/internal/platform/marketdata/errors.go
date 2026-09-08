@@ -14,6 +14,21 @@ var (
 	ErrUnauthorized = errors.New("marketdata: the provider rejected the API key")
 	// ErrRateLimited means the key is fine but its quota is exhausted.
 	ErrRateLimited = errors.New("marketdata: provider rate limit reached")
+	// ErrThrottled means the provider refused this one call for pacing reasons
+	// and said nothing lasting about the key: it is asking for the next request
+	// later, not reporting a budget that is gone.
+	//
+	// It is separate from ErrRateLimited because the two have different
+	// lifetimes, and only one of them is worth writing down. Alpha Vantage
+	// answers a burst with "please consider spreading out your free API requests
+	// more sparingly (1 request per second)"; the same key succeeds seconds
+	// later. Recording that as an exhausted quota leaves a standing "no quota"
+	// badge on a key that works, which is exactly what it used to do.
+	//
+	// The throttle is per **IP** as much as per key — a call with a different
+	// key from the same host trips it too — so our own concurrency can cause it,
+	// and no verdict about the user's credential follows from it.
+	ErrThrottled = errors.New("marketdata: provider is throttling requests right now")
 	// ErrUnsupported means this provider has no data for the symbol or pair,
 	// which is the signal for the fallback chain to try the next one.
 	ErrUnsupported = errors.New("marketdata: provider does not cover this symbol")

@@ -81,10 +81,12 @@ func (s *service) VerifyCredential(ctx context.Context, userID uuid.UUID, provid
 	defer secretbox.Zero(apiKey)
 
 	status, probeErr := s.probe(ctx, provider, string(apiKey))
-	if errors.Is(probeErr, ErrProviderUnavailable) {
-		// The row is left exactly as it was. An outage is a statement about the
-		// provider, not about the key, and writing 'invalid' here would take the
-		// key out of the sync queries until the user noticed and re-verified.
+	if errors.Is(probeErr, ErrProviderUnavailable) || errors.Is(probeErr, ErrProviderThrottled) {
+		// The row is left exactly as it was. An outage — or a throttle, which is
+		// about our request rate and our IP — is a statement about the provider,
+		// not about the key, and writing a verdict here would either take the key
+		// out of the sync queries until the user noticed and re-verified, or
+		// leave it labelled as out of quota when it is not.
 		return Credential{}, probeErr
 	}
 
@@ -145,7 +147,7 @@ func classifyProbe(err error) (CredentialStatus, error) {
 		return "", ErrProviderUnavailable
 	}
 
-	var unauthorized, rateLimited, unsupported bool
+	var unauthorized, rateLimited, throttled, unsupported bool
 
 	for _, verdict := range verdicts {
 		switch {
@@ -153,6 +155,8 @@ func classifyProbe(err error) (CredentialStatus, error) {
 			unauthorized = true
 		case errors.Is(verdict.Err, marketdata.ErrRateLimited):
 			rateLimited = true
+		case errors.Is(verdict.Err, marketdata.ErrThrottled):
+			throttled = true
 		case errors.Is(verdict.Err, marketdata.ErrUnsupported):
 			unsupported = true
 		}
@@ -165,6 +169,14 @@ func classifyProbe(err error) (CredentialStatus, error) {
 		// The key is fine, its quota is not. Stored as-is so the UI can say so,
 		// and so tomorrow's sync tries it again instead of skipping it.
 		return CredentialRateLimited, nil
+	case throttled:
+		// The provider asked us to slow down, which proves nothing either way:
+		// the same key answers when the calls are spaced out, and the throttle
+		// is shared across our keys because it follows our IP. Treated like an
+		// outage — the row is left exactly as it was — because writing
+		// 'rate_limited' here is what used to leave a working key wearing a
+		// standing "no quota" badge.
+		return "", ErrProviderThrottled
 	case unsupported:
 		// The provider answered and did not object to the key; it just has no
 		// data for this symbol. That still proves the key works.

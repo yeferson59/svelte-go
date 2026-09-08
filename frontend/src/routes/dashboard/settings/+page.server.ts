@@ -306,11 +306,16 @@ export const actions = {
 
 		if (!res.ok) {
 			// El backend verifica la clave contra el proveedor antes de guardarla,
-			// así que un 400 aquí significa que el proveedor la rechazó.
+			// así que un 400 aquí significa que el proveedor la rechazó. Un 429 no
+			// dice nada de la clave: el proveedor está limitando el ritmo —el de
+			// Alpha Vantage va por IP, así que puede saltar por lo que esté
+			// haciendo el resto de la aplicación— y en unos segundos se guarda.
 			const error =
 				res.status === 400
 					? 'El proveedor rechazó esta clave. Compruébala y vuelve a intentarlo.'
-					: 'No se pudo guardar la clave. Inténtalo de nuevo.';
+					: res.status === 429
+						? 'El proveedor está limitando el ritmo de peticiones. Espera unos segundos y vuelve a guardarla.'
+						: 'No se pudo guardar la clave. Inténtalo de nuevo.';
 
 			return fail(res.status, {
 				action: 'saveMarketKey',
@@ -341,7 +346,10 @@ export const actions = {
 			return fail(res.status, {
 				action: 'verifyMarketKey',
 				marketProvider: parsed.data,
-				marketError: 'No se pudo verificar la clave.'
+				marketError:
+					res.status === 429
+						? 'El proveedor está limitando el ritmo de peticiones. Espera unos segundos y vuelve a verificarla; su estado se ha dejado como estaba.'
+						: 'No se pudo verificar la clave.'
 			});
 		}
 

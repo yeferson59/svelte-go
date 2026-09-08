@@ -131,6 +131,27 @@ func TestRefreshAssetPrice(t *testing.T) {
 		}
 	})
 
+	// The bug this exists to pin: Alpha Vantage answers a burst with "please
+	// consider spreading out your free API requests more sparingly", which is
+	// about our request rate — and our IP, since a different key from the same
+	// host trips it too. Recording it as a spent quota left a key that works a
+	// second later wearing a standing "no quota" badge in the UI.
+	t.Run("a throttle is reported as such and leaves the key alone", func(t *testing.T) {
+		f := newBYOFixture(t, repoFor(stock), failing(Finnhub, marketdata.ErrThrottled))
+		f.creds.seed(t, f.ring, userID, Finnhub, "user-finnhub-key")
+
+		_, err := f.svc.RefreshAssetPrice(context.Background(), userID, assetID, Finnhub)
+		if !errors.Is(err, ErrProviderThrottled) {
+			t.Fatalf("err = %v, want ErrProviderThrottled", err)
+		}
+		if errors.Is(err, ErrProviderQuotaSpent) {
+			t.Error("a throttle must not be reported as a spent quota: the remedies differ")
+		}
+		if got := f.creds.statusOf(userID, Finnhub); got != CredentialActive {
+			t.Errorf("credential status = %q, want it left active", got)
+		}
+	})
+
 	t.Run("a rejected key is reported and recorded, as the sync would", func(t *testing.T) {
 		f := newBYOFixture(t, repoFor(stock), failing(Finnhub, marketdata.ErrUnauthorized))
 		f.creds.seed(t, f.ring, userID, Finnhub, "user-finnhub-key")

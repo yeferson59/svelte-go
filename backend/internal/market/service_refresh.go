@@ -91,7 +91,7 @@ func (s *service) providerForOne(ctx context.Context, userID uuid.UUID, provider
 // An error carrying no verdict — a timeout, a 5xx, an asset that is not in the
 // catalog — is returned untouched, so it keeps whatever status it already had.
 func classifyRefresh(err error) error {
-	var unauthorized, rateLimited, unsupported bool
+	var unauthorized, rateLimited, throttled, unsupported bool
 
 	for _, verdict := range marketdata.Verdicts(err) {
 		switch {
@@ -99,6 +99,8 @@ func classifyRefresh(err error) error {
 			unauthorized = true
 		case errors.Is(verdict.Err, marketdata.ErrRateLimited):
 			rateLimited = true
+		case errors.Is(verdict.Err, marketdata.ErrThrottled):
+			throttled = true
 		case errors.Is(verdict.Err, marketdata.ErrUnsupported):
 			unsupported = true
 		}
@@ -109,6 +111,10 @@ func classifyRefresh(err error) error {
 		return ErrInvalidAPIKey
 	case rateLimited:
 		return ErrProviderQuotaSpent
+	case throttled:
+		// Not the same answer as a spent quota, and not the same remedy: this one
+		// clears in seconds.
+		return ErrProviderThrottled
 	case unsupported:
 		return ErrAssetNotCovered
 	default:

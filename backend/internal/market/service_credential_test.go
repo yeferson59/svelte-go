@@ -184,6 +184,24 @@ func TestVerifyCredential(t *testing.T) {
 		}
 	})
 
+	// Same reasoning as the outage below, one step milder: a throttle is about
+	// how fast we asked — and, since Alpha Vantage's burst limit follows our IP,
+	// about our own concurrency — never about the key. Stamping 'rate_limited'
+	// here left a working key showing "no quota" until somebody re-verified it.
+	t.Run("a throttled provider leaves the stored status untouched", func(t *testing.T) {
+		f := newBYOFixture(t, new(fakeRepository{}), quoteFailing(providerErr(AlphaVantage, marketdata.ErrThrottled, "alphavantage: quote: please consider spreading out your free API requests more sparingly (1 request per second)")))
+		f.creds.seed(t, f.ring, userID, AlphaVantage, "perfectly-good-key")
+
+		_, err := f.svc.VerifyCredential(context.Background(), userID, AlphaVantage)
+		if !errors.Is(err, ErrProviderThrottled) {
+			t.Fatalf("err = %v, want ErrProviderThrottled", err)
+		}
+
+		if got := f.creds.statusOf(userID, AlphaVantage); got != CredentialActive {
+			t.Fatalf("status = %q, want it left at %q", got, CredentialActive)
+		}
+	})
+
 	// An outage must leave the row alone. Writing 'invalid' here takes the key
 	// out of GetSealedCredentials and UsersWithCredentials for good, so one bad
 	// afternoon at the provider would silently retire a key that still works.
